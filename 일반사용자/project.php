@@ -4,10 +4,10 @@ include 'db.php';
 
 // 로그인 여부 확인
 if (!isset($_SESSION['login_id'])) {
+    // 로그인되지 않은 경우 로그인 페이지로 리다이렉션
     header("Location: login.php");
     exit();
 }
-
 $project_id = $_GET['project_id'] ?? null;
 if (!$project_id) {
     die("잘못된 접근입니다.");
@@ -26,12 +26,15 @@ $projectResult = $projectStmt->get_result();
 $project = $projectResult->fetch_assoc();
 
 // 프로젝트 관리자 조회
+// 비밀번호 보안을 위해 View 사용
 $managerQuery = "
     SELECT u.user_name
     FROM project_member AS pm
-    JOIN User AS u ON pm.login_id = u.login_id
+    JOIN UserBasicView1 AS u ON pm.login_id = u.login_id
     WHERE pm.project_id = ? AND pm.project_role = 1
 ";
+
+
 $managerStmt = $conn->prepare($managerQuery);
 $managerStmt->bind_param("i", $project_id);
 $managerStmt->execute();
@@ -39,12 +42,15 @@ $managerResult = $managerStmt->get_result();
 $manager = $managerResult->fetch_assoc()['user_name'] ?? 'N/A';
 
 // 프로젝트 멤버 조회
+// 비밀번호 보안을 위해 View 사용
 $memberQuery = "
     SELECT u.user_name
     FROM project_member AS pm
-    JOIN User AS u ON pm.login_id = u.login_id
+    JOIN UserBasicView1 AS u ON pm.login_id = u.login_id
     WHERE pm.project_id = ?
 ";
+
+
 $memberStmt = $conn->prepare($memberQuery);
 $memberStmt->bind_param("i", $project_id);
 $memberStmt->execute();
@@ -62,6 +68,7 @@ $taskQuery = "
     FROM task
     WHERE project_id = ?
 ";
+
 $taskStmt = $conn->prepare($taskQuery);
 $taskStmt->bind_param("i", $project_id);
 $taskStmt->execute();
