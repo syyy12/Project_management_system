@@ -1,3 +1,5 @@
+// 뷰 테이블 적용 x
+// 2024 11 21 김동하
 <?php
 session_start();
 include 'db.php';
