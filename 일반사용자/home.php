@@ -1,5 +1,3 @@
-// 마지막 업데이트 2024 11 21 
-// 수정자 : 김동하
 <?php
 session_start();
 include 'db.php';
@@ -12,7 +10,7 @@ if (!isset($_SESSION['login_id'])) {
 
 $login_id = $_SESSION['login_id'];
 $user_name = $_SESSION['user_name'];
-// 김동하 - project_view 사용
+
 // 참여 중인 프로젝트 목록 조회
 $projectQuery = "
     SELECT 
@@ -32,17 +30,15 @@ $projectStmt->bind_param("s", $login_id);
 $projectStmt->execute();
 $projectResult = $projectStmt->get_result();
 
-// 김동하 - PostProjectView1 사용
 // 참여 중인 프로젝트의 게시글 목록 조회 (수정일 기준 내림차순 정렬)
 $postQuery = "
-    SELECT pv.post_id, pv.title, pv.created_date, pv.updated_date, pr.id AS project_id, pr.project_name
-    FROM PostProjectView1 AS pv
+    SELECT pv.id, pv.Post_id, pv.title, pv.created_date, pv.updated_date, pr.id AS project_id, pr.project_name
+    FROM post AS pv
     JOIN project AS pr ON pv.project_id = pr.id -- 프로젝트 ID로 조인
     JOIN project_member AS pm ON pr.id = pm.project_id -- 프로젝트 멤버 조인
     WHERE pm.login_id = ? -- 로그인한 사용자가 속한 프로젝트
     ORDER BY COALESCE(pv.updated_date, pv.created_date) DESC
 ";
-
 
 $postStmt = $conn->prepare($postQuery);
 $postStmt->bind_param("s", $login_id);
@@ -153,30 +149,48 @@ $postResult = $postStmt->get_result();
             </ul>
         </div>
 
-<!-- 게시글 목록 -->
-<div class="section">
-    <h3>📝 전체 게시판</h3>
-    <ul>
-        <?php
-        if ($postResult->num_rows > 0) {
-            while ($post = $postResult->fetch_assoc()) {
-                $postTitle = htmlspecialchars($post['title']);
-                $postId = $post['post_id']; // 수정: 게시글 ID를 가져옴
-                $projectId = $post['project_id']; // 프로젝트 ID
-                $projectName = htmlspecialchars($post['project_name']);
-                $createdDate = $post['created_date'];
-                $updatedDate = $post['updated_date'];
-                $displayDate = $updatedDate ?? $createdDate;
+        <!-- 게시글 목록 -->
+        <div class="section">
+            <h3>📝 전체 게시판</h3>
+            <ul>
+                <?php
+                if ($postResult->num_rows > 0) {
+                    while ($post = $postResult->fetch_assoc()) {
+                        $postTitle = htmlspecialchars($post['title']);
+                        $postId = $post['id']; // 게시글 ID
+                        $postParentId = $post['Post_id']; // 답글의 원글 ID
+                        $projectId = $post['project_id']; // 프로젝트 ID
+                        $projectName = htmlspecialchars($post['project_name']);
+                        $createdDate = $post['created_date'];
+                        $updatedDate = $post['updated_date'];
+                        $displayDate = $updatedDate ?? $createdDate;
 
-                // 게시글 출력: 제목, 프로젝트 이름, 수정일 또는 작성일
-                echo "<li><a href='view_post.php?post_id=$postId&project_id=$projectId'>$postTitle</a> - $projectName ($displayDate)</li>";
-            }
-        } else {
-            echo "<li>게시글이 없습니다.</li>";
-        }
-        ?>
-    </ul>
-</div>
+                        // 답글 여부를 확인하여 제목 변경
+                        if ($postParentId) {
+                            // 원글 제목 가져오기
+                            $parentQuery = "SELECT title FROM post WHERE id = ?";
+                            $parentStmt = $conn->prepare($parentQuery);
+                            $parentStmt->bind_param("i", $postParentId);
+                            $parentStmt->execute();
+                            $parentResult = $parentStmt->get_result();
+
+                            if ($parentResult->num_rows > 0) {
+                                $parentRow = $parentResult->fetch_assoc();
+                                $parentTitle = htmlspecialchars($parentRow['title']);
+                                $postTitle = "[답글: $parentTitle] $postTitle";
+                            }
+                            $parentStmt->close();
+                        }
+
+                        // 게시글 출력
+                        echo "<li><a href='view_post.php?post_id=$postId&project_id=$projectId'>$postTitle</a> - $projectName ($displayDate)</li>";
+                    }
+                } else {
+                    echo "<li>게시글이 없습니다.</li>";
+                }
+                ?>
+            </ul>
+        </div>
     </div>
 
     <!-- 로그아웃 버튼 -->
