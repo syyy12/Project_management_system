@@ -25,41 +25,46 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $projectEnd = trim($_POST['project_end']);
     $projectMembers = $_POST['project_members'] ?? []; // 배열 형태
 
-    // 프로젝트 데이터 삽입
-    $projectInsertQuery = "
-        INSERT INTO project (project_name, description, start, end, finish)
-        VALUES (?, ?, ?, ?, 0)
-    ";
-    $stmt = $conn->prepare($projectInsertQuery);
-    $stmt->bind_param("ssss", $projectName, $projectDescription, $projectStart, $projectEnd);
-    $stmt->execute();
-    $projectId = $conn->insert_id; // 생성된 프로젝트 ID
+    // 관리자 검증: 관리자가 멤버로 선택되었는지 확인
+    if (!in_array($projectAdmin, $projectMembers)) {
+        $error = "관리자는 반드시 프로젝트 멤버로 선택되어야 합니다.";
+    } else {
+        // 프로젝트 데이터 삽입
+        $projectInsertQuery = "
+            INSERT INTO project (project_name, description, start, end, finish)
+            VALUES (?, ?, ?, ?, 0)
+        ";
+        $stmt = $conn->prepare($projectInsertQuery);
+        $stmt->bind_param("ssss", $projectName, $projectDescription, $projectStart, $projectEnd);
+        $stmt->execute();
+        $projectId = $conn->insert_id; // 생성된 프로젝트 ID
 
-    // 프로젝트 관리자 삽입 (project_role = 1)
-    $adminInsertQuery = "
-        INSERT INTO project_member (project_id, login_id, project_role)
-        VALUES (?, ?, 1)
-    ";
-    $adminStmt = $conn->prepare($adminInsertQuery);
-    $adminStmt->bind_param("is", $projectId, $projectAdmin);
-    $adminStmt->execute();
+        // 프로젝트 관리자 삽입 (project_role = 1)
+        $adminInsertQuery = "
+            INSERT INTO project_member (project_id, login_id, project_role)
+            VALUES (?, ?, 1)
+        ";
+        $adminStmt = $conn->prepare($adminInsertQuery);
+        $adminStmt->bind_param("is", $projectId, $projectAdmin);
+        $adminStmt->execute();
 
-    // 프로젝트 멤버 데이터 삽입 (관리자 제외, project_role = 0)
-    foreach ($projectMembers as $memberId) {
-        if ($memberId !== $projectAdmin) { // 관리자는 멤버에서 제외
-            $memberInsertQuery = "
-                INSERT INTO project_member (project_id, login_id, project_role)
-                VALUES (?, ?, 0)
-            ";
-            $memberStmt = $conn->prepare($memberInsertQuery);
-            $memberStmt->bind_param("is", $projectId, $memberId);
-            $memberStmt->execute();
+        // 프로젝트 멤버 데이터 삽입 (관리자 제외, project_role = 0)
+        foreach ($projectMembers as $memberId) {
+            if ($memberId !== $projectAdmin) { // 관리자는 멤버에서 제외
+                $memberInsertQuery = "
+                    INSERT INTO project_member (project_id, login_id, project_role)
+                    VALUES (?, ?, 0)
+                ";
+                $memberStmt = $conn->prepare($memberInsertQuery);
+                $memberStmt->bind_param("is", $projectId, $memberId);
+                $memberStmt->execute();
+            }
         }
-    }
 
-    // 성공 메시지 및 리다이렉션
-    header("Location: project.php?project_id=" . $projectId);
-    exit();
+        // 성공 메시지 및 리다이렉션
+        header("Location: m_project.php?project_id=" . $projectId);
+        exit();
+    }
 }
 ?>
 
@@ -119,12 +124,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         button:hover {
             background-color: #45a049;
         }
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="form-container">
         <h2>프로젝트 생성</h2>
         <form method="POST" action="m_create.php">
+            <?php if (isset($error)): ?>
+                <div class="error"><?php echo $error; ?></div>
+            <?php endif; ?>
             <label for="project_name">프로젝트 이름</label>
             <input type="text" id="project_name" name="project_name" placeholder="프로젝트 이름을 입력하세요" required>
 
