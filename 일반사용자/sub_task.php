@@ -1,7 +1,13 @@
-# 2024 11 21 : 15시 수정 보안성 View 추가
+# 2024 11 21 : 15시 수정 보안성 View 추가, 로그인 상시 확인
 <?php
 session_start();
 include 'db.php';
+
+// 로그인 여부 확인
+if (!isset($_SESSION['login_id'])) {
+    header("Location: login.php");
+    exit();
+}
 
 $sub_task_id = $_GET['sub_task_id'] ?? null;
 $task_id = $_GET['task_id'] ?? null;
