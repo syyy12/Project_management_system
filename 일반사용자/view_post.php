@@ -1,5 +1,4 @@
-// 뷰 테이블 적용 x
-// 2024 11 21
+# 최종 2024 11 21 14시
 <?php
 session_start();
 include 'db.php';
@@ -14,17 +13,30 @@ if (!$post_id || !$project_id) {
 $postQuery = "
     SELECT p.title, p.content, p.created_date, p.updated_date, u.user_name
     FROM Post AS p
-    JOIN User AS u ON p.login_id = u.login_id
+    JOIN user_view AS u ON p.login_id = u.login_id
     WHERE p.id = ?
 ";
 $postStmt = $conn->prepare($postQuery);
 $postStmt->bind_param("i", $post_id);
-$postStmt->execute();
+$postStmt->execute(); 
 $postResult = $postStmt->get_result();
 $post = $postResult->fetch_assoc();
 
 if (!$post) {
     die("게시글을 찾을 수 없습니다.");
+}
+
+// 프로젝트 이름 조회
+$projectName = '';
+$projectQuery = "SELECT project_name FROM project WHERE id = ?";
+$projectStmt = $conn->prepare($projectQuery);
+$projectStmt->bind_param("i", $project_id);
+$projectStmt->execute();
+$projectResult = $projectStmt->get_result();
+$project = $projectResult->fetch_assoc();
+
+if ($project) {
+    $projectName = htmlspecialchars($project['project_name']);
 }
 ?>
 
@@ -122,6 +134,7 @@ if (!$post) {
             <p><strong>작성자:</strong> <?php echo htmlspecialchars($post['user_name']); ?></p>
             <p><strong>작성일:</strong> <?php echo $post['created_date']; ?></p>
             <p><strong>최종 수정일:</strong> <?php echo $post['updated_date'] ?? '수정 없음'; ?></p>
+            <p><strong>프로젝트 이름:</strong> <?php echo $projectName ?: '알 수 없음'; ?></p>
         </div>
 
         <!-- 게시글 내용 -->
@@ -131,8 +144,9 @@ if (!$post) {
 
         <!-- 버튼들 -->
         <div class="buttons">
-            <button class="primary" onclick="location.href='post.php?project_id=<?php echo $project_id; ?>'">목록</button>
+            <button class="primary" onclick="location.href='post.php?project_id=<?php echo $project_id; ?>'">게시글 목록</button>
             <button class="disabled" disabled>첨부파일</button>
+            <button class="secondary" onclick="location.href='home.php'">홈으로</button>
         </div>
     </div>
 </body>
