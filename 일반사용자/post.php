@@ -1,4 +1,4 @@
-# 최종 2024 11 21
+# 2024 11 21 15시 수정
 <?php
 session_start();
 include 'db.php';
@@ -32,7 +32,7 @@ $projectStmt->close();
 
 // 게시글 목록 조회
 $postQuery = "
-    SELECT p.id, p.title, p.created_date, p.updated_date, p.Post_id, u.user_name
+    SELECT p.id, p.title, p.created_date, p.updated_date, p.Post_id, p.is_noticed, u.user_name
     FROM Post AS p
     JOIN User AS u ON p.login_id = u.login_id
     WHERE p.project_id = ?
@@ -120,9 +120,15 @@ $postResult = $postStmt->get_result();
                     $postTitle = htmlspecialchars($post['title']);
                     $postId = $post['id'];
                     $postParentId = $post['Post_id'];
+                    $isNoticed = $post['is_noticed'];
                     $userName = htmlspecialchars($post['user_name']);
                     $createdDate = $post['created_date'];
                     $updatedDate = $post['updated_date'] ?? '최종 수정 없음';
+
+                    // 공지 여부 확인
+                    if ($isNoticed) {
+                        $postTitle = "[공지] $postTitle";
+                    }
 
                     // 답글 여부 확인
                     if ($postParentId) {
@@ -155,6 +161,7 @@ $postResult = $postStmt->get_result();
         <div class="buttons">
             <button onclick="location.href='create_post.php?project_id=<?php echo $project_id; ?>'">글 쓰기</button>
             <button class="secondary" onclick="location.href='project.php?project_id=<?php echo $project_id; ?>'">프로젝트 정보</button>
+            <button class="secondary" onclick="location.href='home.php'">홈으로</button>
         </div>
     </div>
 </body>
