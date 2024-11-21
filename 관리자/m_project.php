@@ -25,9 +25,31 @@ $projectStmt->execute();
 $projectResult = $projectStmt->get_result();
 $project = $projectResult->fetch_assoc();
 
+// 프로젝트 멤버 및 관리자 조회
+$membersQuery = "
+    SELECT pm.login_id, u.user_name, pm.project_role
+    FROM project_member pm
+    JOIN User u ON pm.login_id = u.login_id
+    WHERE pm.project_id = ?
+";
+$membersStmt = $conn->prepare($membersQuery);
+$membersStmt->bind_param("i", $project_id);
+$membersStmt->execute();
+$membersResult = $membersStmt->get_result();
+
+$manager = null;
+$members = [];
+while ($row = $membersResult->fetch_assoc()) {
+    if ((int)$row['project_role'] === 1) { // 관리자
+        $manager = $row['user_name'];
+    } else { // 일반 멤버
+        $members[] = $row['user_name'];
+    }
+}
+
 // 테스크 목록 조회
 $taskQuery = "
-    SELECT task_name, is_completed
+    SELECT id, task_name, is_completed
     FROM task
     WHERE project_id = ?
 ";
@@ -36,7 +58,6 @@ $taskStmt->bind_param("i", $project_id);
 $taskStmt->execute();
 $taskResult = $taskStmt->get_result();
 
-// 진행 상태 계산
 $totalTasks = 0;
 $completedTasks = 0;
 $tasks = [];
@@ -52,20 +73,36 @@ $progress = ($totalTasks > 0) ? round(($completedTasks / $totalTasks) * 100, 1) 
 
 // 삭제 처리
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
-    $deleteQueries = [
-        "DELETE FROM sub_task WHERE task_id IN (SELECT id FROM task WHERE project_id = ?)",
-        "DELETE FROM task WHERE project_id = ?",
-        "DELETE FROM project_member WHERE project_id = ?",
-        "DELETE FROM project_history WHERE project_id = ?",
-        "DELETE FROM project WHERE id = ?"
-    ];
-    foreach ($deleteQueries as $query) {
-        $deleteStmt = $conn->prepare($query);
-        $deleteStmt->bind_param("i", $project_id);
-        $deleteStmt->execute();
+    $password = $_POST['password'] ?? '';
+    
+    // 비밀번호 확인
+    $userQuery = "SELECT password FROM User WHERE login_id = ?";
+    $userStmt = $conn->prepare($userQuery);
+    $userStmt->bind_param("s", $_SESSION['login_id']);
+    $userStmt->execute();
+    $userResult = $userStmt->get_result();
+    $user = $userResult->fetch_assoc();
+
+    // 여기서 password_verify 대신 == 사용
+    if ($user['password'] !== $password) {
+        $error = "비밀번호가 일치하지 않습니다.";
+    } else {
+        // 삭제 쿼리 실행
+        $deleteQueries = [
+            "DELETE FROM sub_task WHERE task_id IN (SELECT id FROM task WHERE project_id = ?)",
+            "DELETE FROM task WHERE project_id = ?",
+            "DELETE FROM project_member WHERE project_id = ?",
+            "DELETE FROM project_history WHERE project_id = ?",
+            "DELETE FROM project WHERE id = ?"
+        ];
+        foreach ($deleteQueries as $query) {
+            $deleteStmt = $conn->prepare($query);
+            $deleteStmt->bind_param("i", $project_id);
+            $deleteStmt->execute();
+        }
+        header("Location: m_home.php");
+        exit();
     }
-    header("Location: home.php");
-    exit();
 }
 ?>
 
@@ -121,6 +158,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
 
         .tasks ul li {
             margin-bottom: 10px;
+        }
+
+        .tasks ul li a {
+            text-decoration: none;
+            color: #004d99;
+            font-weight: bold;
         }
 
         .tasks ul li span {
@@ -186,6 +229,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
         button.edit:hover {
             background-color: #4cae4c;
         }
+
+        .error {
+            color: red;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -194,9 +242,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
 
         <div class="section">
             <h2>프로젝트 정보</h2>
+            <p><strong>프로젝트 매니저:</strong> <?php echo htmlspecialchars($manager ?? 'N/A'); ?></p>
+            <p><strong>멤버:</strong> <?php echo htmlspecialchars(implode(', ', $members) ?? 'N/A'); ?></p>
             <p><strong>설명:</strong> <?php echo htmlspecialchars($project['description']); ?></p>
-            <p><strong>시작일:</strong> <?php echo htmlspecialchars($project['start']); ?></p>
-            <p><strong>종료일:</strong> <?php echo htmlspecialchars($project['end']); ?></p>
             <p><strong>완료 여부:</strong> <?php echo $project['finish'] ? '완료' : '진행 중'; ?></p>
         </div>
 
@@ -205,7 +253,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
             <ul>
                 <?php foreach ($tasks as $task): ?>
                     <li>
-                        <?php echo htmlspecialchars($task['task_name']); ?> - 
+                        <a href="task.php?task_id=<?php echo $task['id']; ?>">
+                            <?php echo htmlspecialchars($task['task_name']); ?>
+                        </a> - 
                         <span class="<?php echo $task['is_completed'] === 3 ? 'completed' : 'in-progress'; ?>">
                             <?php echo ($task['is_completed'] === 3) ? '완료' : '진행 중'; ?>
                         </span>
@@ -223,9 +273,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
 
         <div class="buttons">
             <form method="POST">
+                <?php if (isset($error)): ?>
+                    <p class="error"><?php echo $error; ?></p>
+                <?php endif; ?>
+                <label for="password">비밀번호 확인</label>
+                <input type="password" name="password" id="password" required>
                 <button type="submit" name="delete_project" class="secondary">삭제</button>
             </form>
-            <button onclick="location.href='edit_project.php?project_id=<?php echo $project_id; ?>'" class="edit">수정</button>
+            <button onclick="location.href='m_project_edit.php?project_id=<?php echo $project_id; ?>'" class="edit">수정</button>
             <button onclick="location.href='m_home.php'" class="primary">뒤로 가기</button>
         </div>
     </div>
