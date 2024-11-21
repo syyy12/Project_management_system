@@ -104,6 +104,24 @@
             font-weight: bold;
             margin-bottom: 5px;
         }
+        /* 뒤로가기 버튼 스타일 */
+        .back-btn {
+            position: fixed;
+            bottom: 150px;
+            right: 20px;
+            background-color: #c0c0c0; /* 회색 */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+        .back-btn:hover {
+            background-color: #666666; /* 약간 어두운 회색 */
+        }
     </style>
 </head>
 <body>
@@ -209,5 +227,8 @@
             </div>
         </section>
     </main>
+
+    <!-- 뒤로가기 버튼 -->
+    <a href="m_home.php" class="back-btn">뒤로가기</a>
 </body>
 </html>
