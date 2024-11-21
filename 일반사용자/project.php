@@ -1,3 +1,4 @@
+# 2024 11 21 14시24분 수정 김동하
 <?php
 session_start();
 include 'db.php';
@@ -30,7 +31,7 @@ $project = $projectResult->fetch_assoc();
 $managerQuery = "
     SELECT u.user_name
     FROM project_member AS pm
-    JOIN UserBasicView1 AS u ON pm.login_id = u.login_id
+    JOIN user_view  AS u ON pm.login_id = u.login_id
     WHERE pm.project_id = ? AND pm.project_role = 1
 ";
 
@@ -46,7 +47,7 @@ $manager = $managerResult->fetch_assoc()['user_name'] ?? 'N/A';
 $memberQuery = "
     SELECT u.user_name
     FROM project_member AS pm
-    JOIN UserBasicView1 AS u ON pm.login_id = u.login_id
+    JOIN user_view  AS u ON pm.login_id = u.login_id
     WHERE pm.project_id = ?
 ";
 
