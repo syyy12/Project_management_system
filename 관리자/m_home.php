@@ -176,7 +176,7 @@ $postResult = $conn->query($postQuery);
     </div>
 
     <!-- 분석 페이지 버튼 -->
-    <a href="analysis.php" class="analysis-button">분석 페이지로 이동</a>
+    <a href="analysis1.php" class="analysis-button">분석 페이지로 이동</a>
 
     <!-- 로그아웃 버튼 -->
     <button class="logout-button" onclick="location.href='logout.php'">로그아웃</button>
