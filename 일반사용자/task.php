@@ -19,16 +19,61 @@ $taskStmt->execute();
 $taskResult = $taskStmt->get_result();
 $task = $taskResult->fetch_assoc();
 
-// 서브 테스크 목록 조회
+// 서브 테스크 목록 및 관계 조회
 $subTaskQuery = "
-    SELECT DISTINCT id, sub_task_name, is_completed
-    FROM sub_task
-    WHERE task_id = ?
+    SELECT st.id, st.sub_task_name, st.is_completed, st.min_days, st.start, st.end, st.pre_sub_task_id, pst.sub_task_name AS pre_task_name
+    FROM sub_task AS st
+    LEFT JOIN sub_task AS pst ON st.pre_sub_task_id = pst.id
+    WHERE st.task_id = ?
 ";
 $subTaskStmt = $conn->prepare($subTaskQuery);
 $subTaskStmt->bind_param("i", $task_id);
 $subTaskStmt->execute();
 $subTaskResult = $subTaskStmt->get_result();
+
+// 데이터 그룹화: 선행 관계에 따라 서브 테스크 정렬
+$tasksById = [];
+$chains = [];
+$independentTasks = [];
+$allCompleted = true; // 모든 서브 테스크 완료 상태 확인 변수
+
+while ($row = $subTaskResult->fetch_assoc()) {
+    $tasksById[$row['id']] = $row;
+
+    // `is_completed` 값이 3(완료)이 아닌 경우, 전체 완료 상태를 false로 설정
+    if ((int)$row['is_completed'] !== 3) {
+        $allCompleted = false;
+    }
+
+    if (empty($row['pre_sub_task_id'])) {
+        $independentTasks[$row['id']] = [$row];
+    } else {
+        $chains[$row['pre_sub_task_id']][] = $row['id'];
+    }
+}
+
+// 정렬된 체인을 생성
+$tasksByGroup = [];
+$visited = [];
+foreach ($independentTasks as $taskId => $taskGroup) {
+    $currentChain = $taskGroup;
+    $currentId = $taskId;
+
+    while (isset($chains[$currentId])) {
+        foreach ($chains[$currentId] as $nextTaskId) {
+            if (!in_array($nextTaskId, $visited)) {
+                $visited[] = $nextTaskId;
+                $currentChain[] = $tasksById[$nextTaskId];
+                $currentId = $nextTaskId;
+            }
+        }
+    }
+    $tasksByGroup[] = $currentChain;
+}
+
+// 테스크 완료 여부 계산
+$taskStatusClass = $allCompleted ? 'completed' : 'in-progress';
+$taskStatusText = $allCompleted ? '완료' : '진행중';
 ?>
 
 <!DOCTYPE html>
@@ -42,12 +87,12 @@ $subTaskResult = $subTaskStmt->get_result();
             font-family: Arial, sans-serif;
             background-color: #f0f2f5;
             margin: 0;
-            padding: 0;
+            padding: 20px;
         }
 
         .container {
-            max-width: 90%;
-            margin: 40px auto;
+            max-width: 1200px;
+            margin: 0 auto;
             padding: 20px;
             background: white;
             border-radius: 8px;
@@ -70,52 +115,98 @@ $subTaskResult = $subTaskStmt->get_result();
             margin: 10px 0;
         }
 
-        .sub-tasks {
-            margin-top: 30px;
-        }
-
-        .sub-tasks h3 {
+        .task-status {
             font-size: 24px;
-            color: #4CAF50;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        ul li {
-            font-size: 18px;
-            margin: 10px 0;
-        }
-
-        ul li a {
-            text-decoration: none;
             font-weight: bold;
-            color: #004d99;
-        }
-
-        ul li a:hover {
-            text-decoration: underline;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 14px;
             color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 20px;
         }
 
-        .completed {
+        .task-status.completed {
             background-color: #4CAF50;
         }
 
-        .in-progress {
+        .task-status.in-progress {
             background-color: #FFC107;
+        }
+
+        .task-diagram {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .task-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .task-box {
+            text-align: center;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .task-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .task-box a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .task-box h4 {
+            margin: 10px 0;
+            color: #333;
+        }
+
+        .task-box .info {
+            font-size: 14px;
+            color: #555;
+        }
+
+        .task-box .status {
+            display: block;
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status.not-started {
+            background-color: #6c757d;
+        }
+
+        .status.in-progress {
+            background-color: #007BFF;
+        }
+
+        .status.pending {
+            background-color: #FFC107;
+        }
+
+        .status.completed {
+            background-color: #4CAF50;
+        }
+
+        .task-arrow {
+            font-size: 20px;
+            color: #333;
         }
 
         .buttons {
@@ -152,44 +243,64 @@ $subTaskResult = $subTaskStmt->get_result();
 </head>
 <body>
     <div class="container">
-        <!-- 테스크 정보 -->
         <h2><?php echo htmlspecialchars($task['task_name']); ?></h2>
         <div class="info">
             <p><strong>설명:</strong> <?php echo htmlspecialchars($task['description']); ?></p>
             <p><strong>시작일:</strong> <?php echo $task['start']; ?></p>
             <p><strong>종료일:</strong> <?php echo $task['end']; ?></p>
-            <p><strong>완료 여부:</strong> 
-                <span class="status <?php echo $task['is_completed'] ? 'completed' : 'in-progress'; ?>">
-                    <?php echo $task['is_completed'] ? '완료' : '진행 중'; ?>
+            <p>
+                <span class="task-status <?php echo $taskStatusClass; ?>">
+                    완료 여부: <?php echo $taskStatusText; ?>
                 </span>
             </p>
         </div>
 
-        <!-- 서브 테스크 목록 -->
-        <div class="sub-tasks">
-            <h3>서브 테스크 목록</h3>
-            <ul>
-                <?php
-                if ($subTaskResult->num_rows > 0) {
-                    while ($subTask = $subTaskResult->fetch_assoc()) {
-                        $subTaskName = htmlspecialchars($subTask['sub_task_name']);
-                        $subTaskId = $subTask['id'];
-                        $isCompleted = $subTask['is_completed'] ? 'completed' : 'in-progress';
-                        echo "<li>
-                            <a href='sub_task.php?sub_task_id=$subTaskId&task_id=$task_id'>$subTaskName</a> 
-                            <span class='status $isCompleted'>
-                                " . ($subTask['is_completed'] ? '완료' : '진행 중') . "
-                            </span>
-                        </li>";
-                    }
-                } else {
-                    echo "<li>서브 테스크가 없습니다.</li>";
-                }
-                ?>
-            </ul>
+        <div class="task-diagram">
+            <?php foreach ($tasksByGroup as $group): ?>
+                <div class="task-row">
+                    <?php foreach ($group as $subTask): ?>
+                        <?php
+                        $statusClass = '';
+                        $statusText = '';
+                        $progressDays = '-';
+
+                        if ($subTask['is_completed'] == 0) {
+                            $statusClass = 'not-started';
+                            $statusText = '진행 전';
+                        } elseif ($subTask['is_completed'] == 1) {
+                            $statusClass = 'in-progress';
+                            $statusText = '진행 중';
+                            $startDate = new DateTime($subTask['start']);
+                            $currentDate = new DateTime();
+                            $progressDays = $startDate->diff($currentDate)->days;
+                        } elseif ($subTask['is_completed'] == 2) {
+                            $statusClass = 'pending';
+                            $statusText = '완료 대기';
+                        } elseif ($subTask['is_completed'] == 3) {
+                            $statusClass = 'completed';
+                            $statusText = '완료';
+                        }
+                        ?>
+                        <div class="task-box">
+                            <a href="sub_task.php?sub_task_id=<?php echo $subTask['id']; ?>&task_id=<?php echo $task_id; ?>">
+                                <h4><?php echo htmlspecialchars($subTask['sub_task_name']); ?></h4>
+                                <div class="info">
+                                    <p>선행: <?php echo htmlspecialchars($subTask['pre_task_name'] ?? '없음'); ?></p>
+                                    <p>최소 소요일: <?php echo $subTask['min_days']; ?>일</p>
+                                    <p>진행 일수: <?php echo $progressDays; ?>일</p>
+                                </div>
+                                <span class="status <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                            </a>
+                        </div>
+
+                        <?php if (next($group)): ?>
+                            <span class="task-arrow">➡</span>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endforeach; ?>
         </div>
 
-        <!-- 버튼 -->
         <div class="buttons">
             <button class="primary" onclick="location.href='home.php'">뒤로 가기</button>
         </div>
