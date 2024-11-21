@@ -64,6 +64,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $projectAdmin = trim($_POST['project_admin']);
     $projectMembers = $_POST['project_members'] ?? [];
 
+    // 프로젝트 수정 전 히스토리 저장
+    $versionQuery = "SELECT COALESCE(MAX(version), 0) + 1 AS next_version FROM project_history WHERE project_id = ?";
+    $versionStmt = $conn->prepare($versionQuery);
+    $versionStmt->bind_param("i", $project_id);
+    $versionStmt->execute();
+    $versionResult = $versionStmt->get_result();
+    $nextVersion = $versionResult->fetch_assoc()['next_version'];
+
+    $historyInsertQuery = "
+        INSERT INTO project_history (project_id, version, manager_name, description, start, end, modified_date)
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+    ";
+    $historyStmt = $conn->prepare($historyInsertQuery);
+    $managerName = $currentMembers[$admin_id] ?? 'N/A';
+    $historyStmt->bind_param(
+        "iissss",
+        $project_id,
+        $nextVersion,
+        $managerName,
+        $project['description'],
+        $project['start'],
+        $project['end']
+    );
+    $historyStmt->execute();
+
     // 프로젝트 기본 정보 수정
     $updateProjectQuery = "
         UPDATE project
