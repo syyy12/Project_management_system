@@ -1,6 +1,4 @@
 <?php
-# 2024 11 21 16시 수정 : 관리자 유무에 따라 view.php , m_view.php 경로 다르게(아직 검증 x)
-#                      : 제목 관련 부가기능 추가함
 session_start();
 include 'db.php';
 
@@ -18,18 +16,57 @@ if (!$project_id) {
 // 현재 사용자 ID
 $current_user_id = $_SESSION['login_id'];
 
-// 게시글 목록 조회 쿼리
+// 검색 기능 처리
+$search_category = $_GET['search_category'] ?? null;
+$search_keyword = $_GET['search_keyword'] ?? null;
+$is_search_valid = true;
+
+// 기본 게시글 목록 조회 쿼리
 $postQuery = "
     SELECT p.id, p.title, p.created_date, p.updated_date, u.user_name, p.login_id AS author_id
     FROM Post AS p
     JOIN User AS u ON p.login_id = u.login_id
     WHERE p.project_id = ?
-    ORDER BY p.created_date DESC
 ";
-$postStmt = $conn->prepare($postQuery);
-$postStmt->bind_param("i", $project_id);
-$postStmt->execute();
-$postResult = $postStmt->get_result();
+
+// 검색 조건 추가
+if ($search_category && $search_category !== "검색 카테고리") {
+    if (empty($search_keyword)) {
+        // 검색 키워드가 없을 때 아무 결과도 출력되지 않도록 설정
+        $is_search_valid = false;
+    } else {
+        switch ($search_category) {
+            case '작성자':
+                $postQuery .= " AND u.user_name LIKE ?";
+                $search_keyword = '%' . $search_keyword . '%';
+                break;
+            case '제목':
+                $postQuery .= " AND p.title LIKE ?";
+                $search_keyword = '%' . $search_keyword . '%';
+                break;
+            case '내용':
+                $postQuery .= " AND p.content LIKE ?";
+                $search_keyword = '%' . $search_keyword . '%';
+                break;
+        }
+    }
+}
+
+// 정렬 조건 추가
+$postQuery .= " ORDER BY p.created_date DESC";
+
+if ($is_search_valid) {
+    $postStmt = $conn->prepare($postQuery);
+    if ($search_category && $search_category !== "검색 카테고리") {
+        $postStmt->bind_param("is", $project_id, $search_keyword);
+    } else {
+        $postStmt->bind_param("i", $project_id);
+    }
+    $postStmt->execute();
+    $postResult = $postStmt->get_result();
+} else {
+    $postResult = null;
+}
 
 // 프로젝트 관리자 확인 쿼리
 $managerQuery = "
@@ -73,8 +110,29 @@ $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
             margin-bottom: 20px;
         }
 
-        .post-list {
-            margin-top: 20px;
+        .search-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-bar select, .search-bar input, .search-bar button {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .search-bar button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .search-bar button:hover {
+            background-color: #45a049;
         }
 
         .post-list ul {
@@ -144,11 +202,24 @@ $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
         <!-- 게시판 제목 -->
         <h2>프로젝트 <?php echo htmlspecialchars($project_id); ?> 게시판</h2>
 
+        <!-- 검색 기능 -->
+        <form method="GET" class="search-bar">
+            <input type="hidden" name="project_id" value="<?php echo $project_id; ?>">
+            <select name="search_category">
+                <option value="검색 카테고리" <?php if ($search_category === "검색 카테고리") echo 'selected'; ?>>검색 카테고리</option>
+                <option value="작성자" <?php if ($search_category === '작성자') echo 'selected'; ?>>작성자</option>
+                <option value="제목" <?php if ($search_category === '제목') echo 'selected'; ?>>제목</option>
+                <option value="내용" <?php if ($search_category === '내용') echo 'selected'; ?>>내용</option>
+            </select>
+            <input type="text" name="search_keyword" placeholder="검색어를 입력하세요" value="<?php echo htmlspecialchars($search_keyword ?? ''); ?>">
+            <button type="submit">검색</button>
+        </form>
+
         <!-- 게시글 목록 -->
         <div class="post-list">
             <ul>
                 <?php
-                if ($postResult->num_rows > 0) {
+                if ($is_search_valid && $postResult && $postResult->num_rows > 0) {
                     while ($post = $postResult->fetch_assoc()) {
                         $postTitle = htmlspecialchars($post['title']);
                         $postId = $post['id'];
@@ -157,12 +228,10 @@ $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
                         $updatedDate = $post['updated_date'] ?? '최종 수정 없음';
                         $is_author = $post['author_id'] === $current_user_id;
 
-                        // 관리자 또는 게시글 작성자 여부 확인
-                        if ($is_author || $is_manager) {
-                            $target_url = "m_view_post.php";
-                        } else {
-                            $target_url = "view_post.php";
-                        }
+                        // 사용자 권한에 따라 이동 URL 결정
+                        $target_url = ($is_author || $is_manager)
+                            ? "m_view_post.php"
+                            : "view_post.php";
 
                         echo "<li>
                             <a href='$target_url?post_id=$postId&project_id=$project_id'>$postTitle</a>
@@ -172,7 +241,7 @@ $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
                         </li>";
                     }
                 } else {
-                    echo "<li>게시글이 없습니다.</li>";
+                    echo "<li>검색 결과가 없습니다.</li>";
                 }
                 ?>
             </ul>
