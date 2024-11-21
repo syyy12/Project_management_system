@@ -1,4 +1,3 @@
-# 2024 11 21 15시 수정
 <?php
 session_start();
 include 'db.php';
@@ -14,25 +13,12 @@ if (!$project_id) {
     die("잘못된 접근입니다.");
 }
 
-// 프로젝트 이름 조회
-$projectName = '';
-$projectQuery = "SELECT project_name FROM project WHERE id = ?";
-$projectStmt = $conn->prepare($projectQuery);
-$projectStmt->bind_param("i", $project_id);
-$projectStmt->execute();
-$projectResult = $projectStmt->get_result();
+// 현재 사용자 ID
+$current_user_id = $_SESSION['login_id'];
 
-if ($projectResult->num_rows > 0) {
-    $projectRow = $projectResult->fetch_assoc();
-    $projectName = htmlspecialchars($projectRow['project_name']);
-} else {
-    die("유효하지 않은 프로젝트 ID입니다.");
-}
-$projectStmt->close();
-
-// 게시글 목록 조회
+// 게시글 목록 조회 쿼리
 $postQuery = "
-    SELECT p.id, p.title, p.created_date, p.updated_date, p.Post_id, p.is_noticed, u.user_name
+    SELECT p.id, p.title, p.created_date, p.updated_date, u.user_name, p.login_id AS author_id
     FROM Post AS p
     JOIN User AS u ON p.login_id = u.login_id
     WHERE p.project_id = ?
@@ -42,6 +28,18 @@ $postStmt = $conn->prepare($postQuery);
 $postStmt->bind_param("i", $project_id);
 $postStmt->execute();
 $postResult = $postStmt->get_result();
+
+// 프로젝트 관리자 확인 쿼리
+$managerQuery = "
+    SELECT COUNT(*) AS is_manager
+    FROM project_member
+    WHERE project_id = ? AND login_id = ? AND project_role = 1
+";
+$managerStmt = $conn->prepare($managerQuery);
+$managerStmt->bind_param("is", $project_id, $current_user_id);
+$managerStmt->execute();
+$managerResult = $managerStmt->get_result();
+$is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
 ?>
 
 <!DOCTYPE html>
@@ -49,119 +47,137 @@ $postResult = $postStmt->get_result();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> <?php echo $projectName; ?> 게시판</title>
+    <title>프로젝트 <?php echo htmlspecialchars($project_id); ?> 게시판</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
+            background-color: #f0f2f5;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
+
         .container {
-            max-width: 800px;
-            margin: auto;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
             background: white;
             border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
+
         h2 {
-            color: #333;
+            font-size: 36px;
+            color: #004d99;
+            margin-bottom: 20px;
         }
-        ul {
+
+        .post-list {
+            margin-top: 20px;
+        }
+
+        .post-list ul {
             list-style: none;
             padding: 0;
         }
-        ul li {
-            padding: 10px;
+
+        .post-list ul li {
+            padding: 15px 10px;
             margin-bottom: 10px;
-            background: #f0f2f5;
-            border-radius: 5px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        ul li a {
+
+        .post-list ul li a {
             text-decoration: none;
+            font-size: 18px;
             font-weight: bold;
             color: #004d99;
         }
-        ul li a:hover {
+
+        .post-list ul li a:hover {
             text-decoration: underline;
         }
+
+        .post-meta {
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+
         .buttons {
+            margin-top: 30px;
             text-align: right;
-            margin-top: 20px;
         }
+
         button {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            background: #004d99;
+            padding: 10px 20px;
+            font-size: 16px;
             color: white;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
+            margin-left: 10px;
         }
+
+        button.primary {
+            background-color: #004d99;
+        }
+
+        button.primary:hover {
+            background-color: #003366;
+        }
+
         button.secondary {
-            background: #d9534f;
+            background-color: #d9534f;
         }
-        button:hover {
-            opacity: 0.9;
+
+        button.secondary:hover {
+            background-color: #c9302c;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- 게시판 제목 -->
-        <h2> <?php echo $projectName; ?> 게시판</h2>
+        <h2>프로젝트 <?php echo htmlspecialchars($project_id); ?> 게시판</h2>
 
         <!-- 게시글 목록 -->
-        <h3>📝 게시글 목록</h3>
-        <ul>
-            <?php
-            if ($postResult->num_rows > 0) {
-                while ($post = $postResult->fetch_assoc()) {
-                    $postTitle = htmlspecialchars($post['title']);
-                    $postId = $post['id'];
-                    $postParentId = $post['Post_id'];
-                    $isNoticed = $post['is_noticed'];
-                    $userName = htmlspecialchars($post['user_name']);
-                    $createdDate = $post['created_date'];
-                    $updatedDate = $post['updated_date'] ?? '최종 수정 없음';
+        <div class="post-list">
+            <ul>
+                <?php
+                if ($postResult->num_rows > 0) {
+                    while ($post = $postResult->fetch_assoc()) {
+                        $postTitle = htmlspecialchars($post['title']);
+                        $postId = $post['id'];
+                        $userName = htmlspecialchars($post['user_name']);
+                        $createdDate = $post['created_date'];
+                        $updatedDate = $post['updated_date'] ?? '최종 수정 없음';
+                        $is_author = $post['author_id'] === $current_user_id;
 
-                    // 공지 여부 확인
-                    if ($isNoticed) {
-                        $postTitle = "[공지] $postTitle";
+                        // 사용자 권한에 따라 이동 URL 결정
+                        $target_url = ($is_author || $is_manager)
+                            ? "m_view_post.php"
+                            : "view_post.php";
+
+                        echo "<li>
+                            <a href='$target_url?post_id=$postId&project_id=$project_id'>$postTitle</a>
+                            <div class='post-meta'>
+                                작성자: $userName | 작성일: $createdDate | 수정일: $updatedDate
+                            </div>
+                        </li>";
                     }
-
-                    // 답글 여부 확인
-                    if ($postParentId) {
-                        $parentQuery = "SELECT title FROM post WHERE id = ?";
-                        $parentStmt = $conn->prepare($parentQuery);
-                        $parentStmt->bind_param("i", $postParentId);
-                        $parentStmt->execute();
-                        $parentResult = $parentStmt->get_result();
-
-                        if ($parentResult->num_rows > 0) {
-                            $parentRow = $parentResult->fetch_assoc();
-                            $parentTitle = htmlspecialchars($parentRow['title']);
-                            $postTitle = "[답글: $parentTitle] $postTitle";
-                        }
-                        $parentStmt->close();
-                    }
-
-                    echo "<li>
-                        <a href='view_post.php?post_id=$postId&project_id=$project_id'>$postTitle</a>
-                        <div>작성자: $userName | 작성일: $createdDate | 수정일: $updatedDate</div>
-                    </li>";
+                } else {
+                    echo "<li>게시글이 없습니다.</li>";
                 }
-            } else {
-                echo "<li>게시글이 없습니다.</li>";
-            }
-            ?>
-        </ul>
+                ?>
+            </ul>
+        </div>
 
-        <!-- 버튼 -->
+        <!-- 버튼들 -->
         <div class="buttons">
-            <button onclick="location.href='create_post.php?project_id=<?php echo $project_id; ?>'">글 쓰기</button>
-            <button class="secondary" onclick="location.href='project.php?project_id=<?php echo $project_id; ?>'">프로젝트 정보</button>
-            <button class="secondary" onclick="location.href='home.php'">홈으로</button>
+            <button class="primary" onclick="location.href='create_post.php?project_id=<?php echo $project_id; ?>'">글 쓰기</button>
+            <button class="secondary" onclick="location.href='project.php?project_id=<?php echo $project_id; ?>'">목록</button>
         </div>
     </div>
 </body>
