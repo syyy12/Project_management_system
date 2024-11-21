@@ -2,7 +2,6 @@
 session_start();
 include 'db.php';
 
-
 // 모든 프로젝트 목록 조회
 $projectQuery = "
     SELECT id, project_name
@@ -159,12 +158,14 @@ $postResult = $conn->query($postQuery);
                 if ($postResult->num_rows > 0) {
                     while ($post = $postResult->fetch_assoc()) {
                         $postTitle = htmlspecialchars($post['title']);
+                        $postId = $post['id'];
                         $projectName = htmlspecialchars($post['project_name']);
                         $createdDate = $post['created_date'];
                         $updatedDate = $post['updated_date'];
                         $displayDate = $updatedDate ?? $createdDate;
 
-                        echo "<li><a href='view_post.php?post_id={$post['id']}'>{$postTitle}</a> - $projectName ($displayDate)</li>";
+                        // 링크 수정: 항상 m_view_post.php로 이동
+                        echo "<li><a href='m_view_post.php?post_id={$postId}'>{$postTitle}</a> - $projectName ($displayDate)</li>";
                     }
                 } else {
                     echo "<li>게시글이 없습니다.</li>";
