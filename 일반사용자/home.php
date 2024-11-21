@@ -1,4 +1,5 @@
-# 2024 11 21 : 15시 수정
+# 2024 11 21 16시 수정본 : 관리자 유무에 따라 m_view.php or view.php 구현 완료
+#                         소제목 [공지],[답글] 내용 구현
 <?php
 session_start();
 include 'db.php';
@@ -19,7 +20,6 @@ $projectQuery = "
     JOIN project_member AS pm ON pr.id = pm.project_id
     WHERE pm.login_id = ?
 ";
-
 $projectStmt = $conn->prepare($projectQuery);
 $projectStmt->bind_param("s", $login_id);
 $projectStmt->execute();
@@ -27,18 +27,33 @@ $projectResult = $projectStmt->get_result();
 
 // 참여 중인 프로젝트의 게시글 목록 조회 (수정일 기준 내림차순 정렬)
 $postQuery = "
-    SELECT pv.id, pv.Post_id, pv.title, pv.created_date, pv.updated_date, pv.is_noticed, pr.id AS project_id, pr.project_name
-    FROM post AS pv
-    JOIN project AS pr ON pv.project_id = pr.id -- 프로젝트 ID로 조인
-    JOIN project_member AS pm ON pr.id = pm.project_id -- 프로젝트 멤버 조인
-    WHERE pm.login_id = ? -- 로그인한 사용자가 속한 프로젝트
-    ORDER BY COALESCE(pv.updated_date, pv.created_date) DESC
+    SELECT p.id, p.Post_id, p.title, p.created_date, p.updated_date, p.is_noticed, p.login_id AS author_id, pr.id AS project_id, pr.project_name, pm.project_role
+    FROM Post AS p
+    JOIN project AS pr ON p.project_id = pr.id
+    JOIN project_member AS pm ON pr.id = pm.project_id
+    WHERE pm.login_id = ?
+    ORDER BY COALESCE(p.updated_date, p.created_date) DESC
 ";
 
 $postStmt = $conn->prepare($postQuery);
 $postStmt->bind_param("s", $login_id);
 $postStmt->execute();
 $postResult = $postStmt->get_result();
+
+// 프로젝트 관리자 여부 확인
+$managerQuery = "
+    SELECT project_id
+    FROM project_member
+    WHERE login_id = ? AND project_role = 1
+";
+$managerStmt = $conn->prepare($managerQuery);
+$managerStmt->bind_param("s", $login_id);
+$managerStmt->execute();
+$managerResult = $managerStmt->get_result();
+$managedProjects = [];
+while ($row = $managerResult->fetch_assoc()) {
+    $managedProjects[] = $row['project_id'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -47,7 +62,6 @@ $postResult = $postStmt->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>홈페이지</title>
-    <link rel="stylesheet" href="styles.css"> <!-- 외부 CSS 연결 -->
     <style>
         /* 전체 레이아웃 */
         body {
@@ -126,7 +140,7 @@ $postResult = $postStmt->get_result();
         <h2>(주) 영남대학</h2>
     </div>
     <div class="content">
-        <!-- 프로젝트 목록 -->
+       <!-- 프로젝트 목록 -->
         <div class="section">
             <h3>📂 프로젝트 목록</h3>
             <ul>
@@ -144,7 +158,7 @@ $postResult = $postStmt->get_result();
             </ul>
         </div>
 
-        <!-- 게시글 목록 -->
+       <!-- 게시글 목록 -->
         <div class="section">
             <h3>📝 전체 게시판</h3>
             <ul>
@@ -160,6 +174,7 @@ $postResult = $postStmt->get_result();
                         $createdDate = $post['created_date'];
                         $updatedDate = $post['updated_date'];
                         $displayDate = $updatedDate ?? $createdDate;
+                        $isManager = $post['project_role'] == 1; // 매니저 여부 확인
 
                         // 공지사항 확인
                         if ($isNoticed) {
@@ -183,8 +198,11 @@ $postResult = $postStmt->get_result();
                             $parentStmt->close();
                         }
 
+                        // 매니저 여부에 따른 페이지 결정
+                        $targetPage = $isManager ? "m_view_post.php" : "view_post.php";
+
                         // 게시글 출력
-                        echo "<li><a href='view_post.php?post_id=$postId&project_id=$projectId'>$postTitle</a> - $projectName ($displayDate)</li>";
+                        echo "<li><a href='$targetPage?post_id=$postId&project_id=$projectId'>$postTitle</a> - $projectName ($displayDate)</li>";
                     }
                 } else {
                     echo "<li>게시글이 없습니다.</li>";
