@@ -142,7 +142,7 @@ $postResult = $conn->query($postQuery);
                     while ($project = $projectResult->fetch_assoc()) {
                         $projectName = htmlspecialchars($project['project_name']);
                         $projectId = $project['id'];
-                        echo "<li><a href='project.php?project_id=$projectId'>$projectName</a></li>";
+                        echo "<li><a href='m_project.php?project_id=$projectId'>$projectName</a></li>";
                     }
                 } else {
                     echo "<li>생성된 프로젝트가 없습니다.</li>";
@@ -175,7 +175,7 @@ $postResult = $conn->query($postQuery);
     </div>
 
     <!-- 분석 페이지 버튼 -->
-    <button href="analysis.php" class="analysis-button" onclick="location.href='analysis1.php'">분석 페이지로 이동</button>
+    <a href="analysis.php" class="analysis-button">분석 페이지로 이동</a>
 
     <!-- 로그아웃 버튼 -->
     <button class="logout-button" onclick="location.href='logout.php'">로그아웃</button>
