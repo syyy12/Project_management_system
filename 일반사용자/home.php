@@ -1,4 +1,4 @@
-# 최종 2024 11 21
+# 2024 11 21 : 15시 수정
 <?php
 session_start();
 include 'db.php';
@@ -27,7 +27,7 @@ $projectResult = $projectStmt->get_result();
 
 // 참여 중인 프로젝트의 게시글 목록 조회 (수정일 기준 내림차순 정렬)
 $postQuery = "
-    SELECT pv.id, pv.Post_id, pv.title, pv.created_date, pv.updated_date, pr.id AS project_id, pr.project_name
+    SELECT pv.id, pv.Post_id, pv.title, pv.created_date, pv.updated_date, pv.is_noticed, pr.id AS project_id, pr.project_name
     FROM post AS pv
     JOIN project AS pr ON pv.project_id = pr.id -- 프로젝트 ID로 조인
     JOIN project_member AS pm ON pr.id = pm.project_id -- 프로젝트 멤버 조인
@@ -154,11 +154,17 @@ $postResult = $postStmt->get_result();
                         $postTitle = htmlspecialchars($post['title']);
                         $postId = $post['id']; // 게시글 ID
                         $postParentId = $post['Post_id']; // 답글의 원글 ID
+                        $isNoticed = $post['is_noticed']; // 공지 여부
                         $projectId = $post['project_id']; // 프로젝트 ID
                         $projectName = htmlspecialchars($post['project_name']);
                         $createdDate = $post['created_date'];
                         $updatedDate = $post['updated_date'];
                         $displayDate = $updatedDate ?? $createdDate;
+
+                        // 공지사항 확인
+                        if ($isNoticed) {
+                            $postTitle = "[공지] $postTitle";
+                        }
 
                         // 답글 여부를 확인하여 제목 변경
                         if ($postParentId) {
