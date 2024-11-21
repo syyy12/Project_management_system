@@ -1,7 +1,14 @@
-# 2024 11 21 15시 수정
+
 <?php
+# 2024 11 21 : 1530 수정
 session_start();
 include 'db.php';
+
+// 로그인 여부 확인
+if (!isset($_SESSION['login_id'])) {
+    header("Location: login.php");
+    exit();
+}
 
 $post_id = $_GET['post_id'] ?? null;
 $project_id = $_GET['project_id'] ?? null;
