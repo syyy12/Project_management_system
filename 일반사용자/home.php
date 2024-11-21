@@ -1,4 +1,4 @@
-// 2024 11 21 수정
+# 최종 2024 11 21
 <?php
 session_start();
 include 'db.php';
