@@ -1,4 +1,4 @@
-// 최종 2024 11 21
+# 최종 2024 11 21
 <?php
 session_start();
 include 'db.php'; // 데이터베이스 연결
