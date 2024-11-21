@@ -1,4 +1,6 @@
 <?php
+# 2024 11 21 : 18시 수정 : 회원가입시 시스템관리자가 2명 이상으로 하려고 하면 제한
+
 session_start();
 include 'db.php'; // 데이터베이스 연결
 
@@ -13,27 +15,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($login_id) || empty($password) || empty($user_name)) {
         $error = "모든 필드를 입력해주세요.";
     } else {
-        // 아이디 중복 체크
-        $query = "SELECT * FROM User WHERE login_id = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("s", $login_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        if ($is_admin) {
+            // 시스템 관리자가 이미 존재하는지 확인
+            $adminQuery = "SELECT COUNT(*) AS admin_count FROM User WHERE role = 1";
+            $adminStmt = $conn->prepare($adminQuery);
+            $adminStmt->execute();
+            $adminResult = $adminStmt->get_result();
+            $adminCount = $adminResult->fetch_assoc()['admin_count'] ?? 0;
 
-        if ($result->num_rows > 0) {
-            $error = "이미 존재하는 아이디입니다.";
-        } else {
-            // 사용자 정보 삽입
-            $query = "INSERT INTO User (login_id, password, user_name, role) VALUES (?, ?, ?, ?)";
+            if ($adminCount > 0) {
+                $error = "이미 시스템 관리자가 존재합니다. 새로운 시스템 관리자를 추가할 수 없습니다.";
+            }
+        }
+
+        if (!isset($error)) {
+            // 아이디 중복 체크
+            $query = "SELECT * FROM User WHERE login_id = ?";
             $stmt = $conn->prepare($query);
-            $stmt->bind_param("sssi", $login_id, $password, $user_name, $is_admin);
+            $stmt->bind_param("s", $login_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
 
-            if ($stmt->execute()) {
-                $success = "회원가입에 성공했습니다! 로그인 페이지로 이동합니다.";
-                header("refresh:2;url=login.php"); // 2초 후 로그인 페이지로 리다이렉트
-                exit();
+            if ($result->num_rows > 0) {
+                $error = "이미 존재하는 아이디입니다.";
             } else {
-                $error = "회원가입 중 오류가 발생했습니다. 다시 시도해주세요.";
+                // 사용자 정보 삽입
+                $query = "INSERT INTO User (login_id, password, user_name, role) VALUES (?, ?, ?, ?)";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("sssi", $login_id, $password, $user_name, $is_admin);
+
+                if ($stmt->execute()) {
+                    $success = "회원가입에 성공했습니다! 로그인 페이지로 이동합니다.";
+                    header("refresh:2;url=login.php"); // 2초 후 로그인 페이지로 리다이렉트
+                    exit();
+                } else {
+                    $error = "회원가입 중 오류가 발생했습니다. 다시 시도해주세요.";
+                }
             }
         }
     }
