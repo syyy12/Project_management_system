@@ -1,32 +1,53 @@
+// 최종 2024 11 21
 <?php
 session_start();
 include 'db.php'; // 데이터베이스 연결
 
 // 로그인 처리
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $login_id = $_POST['login_id'];
-    $password = $_POST['password'];
-    $is_admin = isset($_POST['is_admin']) ? 1 : 0; // 시스템 관리자 체크 여부
+    $login_id = trim($_POST['login_id']); // 아이디
+    $password = trim($_POST['password']); // 비밀번호
+    $is_admin_checked = isset($_POST['is_admin']) ? 1 : 0; // 시스템 관리자 체크 여부
 
-    // SQL 쿼리: 로그인 아이디, 비밀번호, 역할(role) 확인
-    $query = "SELECT * FROM User WHERE login_id = ? AND password = ? AND role = ?";
+    // SQL 쿼리: 아이디와 비밀번호 확인
+    $query = "SELECT login_id, user_name, role FROM User WHERE login_id = ? AND password = ?";
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("ssi", $login_id, $password, $is_admin);
+    $stmt->bind_param("ss", $login_id, $password);
     $stmt->execute();
     $result = $stmt->get_result();
 
     // 결과 확인
     if ($result->num_rows > 0) {
         $user = $result->fetch_assoc();
+
+        // 세션에 사용자 정보 저장
         $_SESSION['login_id'] = $user['login_id'];
         $_SESSION['user_name'] = $user['user_name'];
         $_SESSION['role'] = $user['role'];
 
-        // 로그인 성공 시 home.php로 이동
-        header("Location: home.php");
-        exit();
+        // 관리자 체크박스가 선택된 경우
+        if ($is_admin_checked) {
+            if ($user['role'] == 1) {
+                // 시스템 관리자 + 체크박스 선택
+                header("Location: m_home.php"); // 관리자 홈 화면으로 이동
+                exit();
+            } else {
+                // 일반 사용자가 관리자 체크박스를 선택한 경우 에러
+                $error = "관리자 권한이 없습니다.";
+            }
+        } else {
+            // 관리자 체크박스가 선택되지 않은 경우
+            if ($user['role'] == 0) {
+                // 일반 사용자
+                header("Location: home.php"); // 일반 사용자 홈 화면으로 이동
+                exit();
+            } else {
+                // 관리자 계정이 관리자 체크박스를 선택하지 않은 경우 에러
+                $error = "관리자 계정으로 로그인하려면 관리자 옵션을 선택하세요.";
+            }
+        }
     } else {
-        $error = "아이디, 비밀번호 또는 권한이 잘못되었습니다.";
+        $error = "아이디 또는 비밀번호가 잘못되었습니다.";
     }
 }
 ?>
@@ -39,7 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>로그인</title>
     <link rel="stylesheet" href="styles.css"> <!-- 외부 CSS 파일 연결 -->
     <style>
-        /* 스타일 적용 */
         body {
             font-family: Arial, sans-serif;
             background-color: #f9f9f9;
@@ -91,27 +111,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             text-align: center;
             margin-top: 10px;
         }
-        .form-actions {
-            display: flex;
-            justify-content: space-between;
-        }
-        .form-actions button {
-            width: 48%;
-        }
     </style>
 </head>
 <body>
     <form method="post" action="login.php">
         <h2>(주) 영남대학</h2>
-        <label>
-            <input type="checkbox" name="is_admin"> 시스템 관리자
-        </label>
         <input type="text" name="login_id" placeholder="아이디" required>
         <input type="password" name="password" placeholder="비밀번호" required>
-        <div class="form-actions">
-            <button type="submit">로그인</button>
-            <button type="button" onclick="location.href='register.php'">회원가입</button>
+        <div>
+            <label>
+                <input type="checkbox" name="is_admin"> 시스템 관리자
+            </label>
         </div>
+        <button type="submit">로그인</button>
         <?php if (isset($error)) { echo "<p class='error'>$error</p>"; } ?>
     </form>
 </body>
