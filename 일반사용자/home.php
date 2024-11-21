@@ -1,3 +1,4 @@
+// 2024 11 21 수정
 <?php
 session_start();
 include 'db.php';
@@ -13,16 +14,10 @@ $user_name = $_SESSION['user_name'];
 
 // 참여 중인 프로젝트 목록 조회
 $projectQuery = "
-    SELECT 
-        *
-    FROM 
-        project_view AS pv
-    JOIN 
-        project_member AS pm 
-    ON 
-        pv.project_id = pm.project_id
-    WHERE 
-        pm.login_id = ?
+    SELECT pr.id, pr.project_name
+    FROM project AS pr
+    JOIN project_member AS pm ON pr.id = pm.project_id
+    WHERE pm.login_id = ?
 ";
 
 $projectStmt = $conn->prepare($projectQuery);
@@ -139,7 +134,7 @@ $postResult = $postStmt->get_result();
                 if ($projectResult->num_rows > 0) {
                     while ($project = $projectResult->fetch_assoc()) {
                         $projectName = htmlspecialchars($project['project_name']);
-                        $projectId = $project['project_id'];
+                        $projectId = $project['id'];
                         echo "<li><a href='project.php?project_id=$projectId'>$projectName</a></li>";
                     }
                 } else {
