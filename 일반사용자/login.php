@@ -1,12 +1,12 @@
-# 최종 2024 11 21
 <?php
+# 최종 2024 11 21 18시 수정
 session_start();
 include 'db.php'; // 데이터베이스 연결
 
 // 로그인 처리
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $login_id = trim($_POST['login_id']); // 아이디
-    $password = trim($_POST['password']); // 비밀번호
+    $login_id = trim($_POST['login_id']); // 입력된 아이디
+    $password = trim($_POST['password']); // 입력된 비밀번호
     $is_admin_checked = isset($_POST['is_admin']) ? 1 : 0; // 시스템 관리자 체크 여부
 
     // SQL 쿼리: 아이디와 비밀번호 확인
@@ -51,7 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -106,6 +105,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         button:hover {
             background-color: #45a049;
         }
+        .register-button {
+            background-color: #007BFF; /* 파란색 */
+            margin-top: 10px;
+        }
+        .register-button:hover {
+            background-color: #0056b3;
+        }
         .error {
             color: red;
             text-align: center;
@@ -124,6 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </label>
         </div>
         <button type="submit">로그인</button>
+        <!-- 회원가입 버튼 -->
+        <button type="button" class="register-button" onclick="location.href='register.php'">회원가입</button>
         <?php if (isset($error)) { echo "<p class='error'>$error</p>"; } ?>
     </form>
 </body>
