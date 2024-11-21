@@ -1,3 +1,4 @@
+# 2024 11 21 : 15시 수정 보안성 View 추가
 <?php
 session_start();
 include 'db.php';
@@ -7,12 +8,12 @@ $task_id = $_GET['task_id'] ?? null;
 if (!$sub_task_id || !$task_id) {
     die("잘못된 접근입니다.");
 }
-
+// 유저 정보 포함 보안성 View 사용
 // 서브 테스크 정보 조회
 $subTaskQuery = "
     SELECT st.sub_task_name, u.user_name, st.start, st.end, st.min_days, st.description, pst.sub_task_name AS pre_task_name
     FROM sub_task AS st
-    LEFT JOIN User AS u ON st.login_id = u.login_id
+    LEFT JOIN user_view AS u ON st.login_id = u.login_id
     LEFT JOIN sub_task AS pst ON st.pre_sub_task_id = pst.id
     WHERE st.id = ?
 ";
