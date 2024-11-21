@@ -1,4 +1,6 @@
 <?php
+# 2024 11 21 16시 수정 : 관리자 유무에 따라 view.php , m_view.php 경로 다르게(아직 검증 x)
+#                      : 제목 관련 부가기능 추가함
 session_start();
 include 'db.php';
 
@@ -155,10 +157,12 @@ $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
                         $updatedDate = $post['updated_date'] ?? '최종 수정 없음';
                         $is_author = $post['author_id'] === $current_user_id;
 
-                        // 사용자 권한에 따라 이동 URL 결정
-                        $target_url = ($is_author || $is_manager)
-                            ? "m_view_post.php"
-                            : "view_post.php";
+                        // 관리자 또는 게시글 작성자 여부 확인
+                        if ($is_author || $is_manager) {
+                            $target_url = "m_view_post.php";
+                        } else {
+                            $target_url = "view_post.php";
+                        }
 
                         echo "<li>
                             <a href='$target_url?post_id=$postId&project_id=$project_id'>$postTitle</a>
