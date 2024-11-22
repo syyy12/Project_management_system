@@ -1,7 +1,7 @@
 <?php
 session_start();
 include 'db.php';
-
+// m_home에서 게시물에 접근할수있게 수정함.
 // 모든 프로젝트 목록 조회
 $projectQuery = "
     SELECT id, project_name
