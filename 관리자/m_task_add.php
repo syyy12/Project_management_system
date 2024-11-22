@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $notification_percentage = $_POST['notification_percentage'] ?? null;
 
     if ($task_name && $start && $end && is_numeric($notification_percentage)) {
+        // 테스크 추가
         $insertQuery = "
             INSERT INTO task (project_id, task_name, description, start, end, is_completed, Notification_Percentage)
             VALUES (?, ?, ?, ?, ?, 0, ?)
@@ -31,6 +32,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
 
         if ($stmt->affected_rows > 0) {
+            // 새로운 수정본 번호 계산
+            $versionQuery = "SELECT COALESCE(MAX(version), 0) + 1 AS next_version FROM project_history WHERE project_id = ?";
+            $versionStmt = $conn->prepare($versionQuery);
+            $versionStmt->bind_param("i", $project_id);
+            $versionStmt->execute();
+            $versionResult = $versionStmt->get_result();
+            $nextVersion = $versionResult->fetch_assoc()['next_version'];
+
+            // 현재 프로젝트 정보 가져오기
+            $projectQuery = "
+                SELECT project_name, description, start, end
+                FROM project
+                WHERE id = ?
+            ";
+            $projectStmt = $conn->prepare($projectQuery);
+            $projectStmt->bind_param("i", $project_id);
+            $projectStmt->execute();
+            $projectResult = $projectStmt->get_result();
+            $project = $projectResult->fetch_assoc();
+
+            // 프로젝트 히스토리에 새로운 수정본 저장
+            $historyInsertQuery = "
+                INSERT INTO project_history (project_id, version, manager_name, description, start, end, modified_date)
+                VALUES (?, ?, ?, ?, ?, ?, NOW())
+            ";
+            $managerName = $_SESSION['login_id']; // 현재 로그인된 사용자를 매니저로 기록
+            $historyStmt = $conn->prepare($historyInsertQuery);
+            $historyStmt->bind_param(
+                "iissss",
+                $project_id,
+                $nextVersion,
+                $managerName,
+                $project['description'],
+                $project['start'],
+                $project['end']
+            );
+            $historyStmt->execute();
+
+            // 테스크 히스토리에 저장
+            $taskHistoryQuery = "
+                INSERT INTO task_history (project_id, version, task_name, description)
+                SELECT project_id, ?, task_name, description
+                FROM task
+                WHERE project_id = ?
+            ";
+            $taskHistoryStmt = $conn->prepare($taskHistoryQuery);
+            $taskHistoryStmt->bind_param("ii", $nextVersion, $project_id);
+            $taskHistoryStmt->execute();
+
+            // 리다이렉트
             header("Location: m_project.php?project_id=$project_id");
             exit();
         } else {
