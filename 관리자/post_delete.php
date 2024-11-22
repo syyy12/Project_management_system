@@ -1,7 +1,7 @@
 <?php
 session_start();
 include 'db.php';
-
+//이거임
 // 로그인 여부 확인
 if (!isset($_SESSION['login_id'])) {
     header("Location: login.php");
