@@ -220,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
             <ul>
                 <?php foreach ($tasks as $task): ?>
                     <li>
-                        <a href="task.php?task_id=<?php echo $task['id']; ?>">
+                        <a href="m_task.php?task_id=<?php echo $task['id']; ?>">
                             <?php echo htmlspecialchars($task['task_name']); ?>
                         </a> - 
                         <span class="<?php echo $task['is_completed'] === 3 ? 'completed' : 'in-progress'; ?>">
@@ -229,7 +229,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
                     </li>
                 <?php endforeach; ?>
             </ul>
+            <button onclick="location.href='m_task_add.php?project_id=<?php echo $project_id; ?>'" style="background-color: #004d99; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">
+                +테스크 추가
+            </button>
         </div>
+
 
         <div class="section">
             <h2>진행 현황</h2>
