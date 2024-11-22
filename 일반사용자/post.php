@@ -1,5 +1,4 @@
 <?php
-# 최종 : post 검색기능까지 모두 구현 완료
 session_start();
 include 'db.php';
 
@@ -250,10 +249,8 @@ $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
 
         <!-- 버튼들 -->
         <div class="buttons">
-           <button class="home" style="background-color: #4CAF50; color: white;" onclick="location.href='home.php'">홈으로</button>
-
             <button class="primary" onclick="location.href='create_post.php?project_id=<?php echo $project_id; ?>'">글 쓰기</button>
-            <button class="secondary" onclick="location.href='project.php?project_id=<?php echo $project_id; ?>'">프로젝트 정보</button>
+            <button class="secondary" onclick="location.href='project.php?project_id=<?php echo $project_id; ?>'">목록</button>
         </div>
     </div>
 </body>
