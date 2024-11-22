@@ -221,9 +221,10 @@ foreach ($independentTasks as $taskId => $taskGroup) {
                 <p><strong>시작일:</strong> <?php echo $task['start']; ?></p>
                 <p><strong>종료일:</strong> <?php echo $task['end']; ?></p>
             </div>
-            <button class="primary" style="margin-top: 60px; padding: 10px 20px; font-size: 16px; color: white; background-color: #004d99; border: none; border-radius: 4px; cursor: pointer;" onclick="location.href='m_add_sub_task.php?task_id=<?php echo $task_id; ?>'">
+            <button class="primary" style="margin-top: 80px; padding: 10px 20px; font-size: 16px; color: white; background-color: #004d99; border: none; border-radius: 4px; cursor: pointer;" onclick="location.href='m_sub_task_add.php?task_id=<?php echo $task_id; ?>'">
                 서브 테스크 추가
             </button>
+
         </div>
 
         <div class="task-diagram">
@@ -253,7 +254,7 @@ foreach ($independentTasks as $taskId => $taskGroup) {
                         }
                         ?>
                         <div class="task-box">
-                            <a href="sub_task.php?sub_task_id=<?php echo $subTask['id']; ?>&task_id=<?php echo $task_id; ?>">
+                            <a href="m_sub_task.php?sub_task_id=<?php echo $subTask['id']; ?>&task_id=<?php echo $task_id; ?>">
                                 <h4><?php echo htmlspecialchars($subTask['sub_task_name']); ?></h4>
                                 <div class="info">
                                     <p>선행: <?php echo htmlspecialchars($subTask['pre_task_name'] ?? '없음'); ?></p>
