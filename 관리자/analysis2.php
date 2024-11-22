@@ -119,6 +119,23 @@ $conn->close();
         .progress-table td:last-child {
             text-align: center;
         }
+        /* 뒤로가기 버튼 */
+        .back-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .back-btn:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -166,5 +183,8 @@ $conn->close();
             </table>
         </section>
     </main>
+
+    <!-- 뒤로가기 버튼 -->
+    <button class="back-btn" onclick="window.location.href='analysis1.php'">뒤로가기</button>
 </body>
 </html>
