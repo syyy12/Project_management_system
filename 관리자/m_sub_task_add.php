@@ -65,48 +65,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_message = "모든 필수 입력값을 작성해주세요.";
     } else {
         try {
-            // 참여 멤버가 해당 프로젝트에 속했는지 확인
-            $checkMembershipQuery = $pdo->prepare("
-                SELECT COUNT(*) FROM project_member 
-                WHERE login_id = :login_id AND project_id = :project_id
-            ");
-            $checkMembershipQuery->execute([
-                ':login_id' => $login_id,
-                ':project_id' => $project_id
-            ]);
-            $isMember = $checkMembershipQuery->fetchColumn();
-
-            // 참여 멤버가 프로젝트에 속하지 않은 경우 추가
-            if (!$isMember) {
-                $addMemberQuery = $pdo->prepare("
-                    INSERT INTO project_member (login_id, project_id, project_role)
-                    VALUES (:login_id, :project_id, 0) -- project_role 기본값은 0 (일반 멤버)
+            // **추가된 로직: 선행 테스크 검증**
+            if (!empty($pre_sub_task_id)) {
+                // 선행 테스크가 이미 다른 서브 테스크의 선행 테스크로 설정되어 있는지 확인
+                $preTaskConflictQuery = $pdo->prepare("
+                    SELECT COUNT(*) FROM sub_task 
+                    WHERE pre_sub_task_id = :pre_sub_task_id
                 ");
-                $addMemberQuery->execute([
+                $preTaskConflictQuery->execute([':pre_sub_task_id' => $pre_sub_task_id]);
+                $conflictCount = $preTaskConflictQuery->fetchColumn();
+
+                if ($conflictCount > 0) {
+                    $error_message = "선택한 선행 테스크는 이미 다른 서브 테스크에서 사용 중입니다.";
+                }
+            }
+
+            // 선행 테스크 검증에 문제가 없을 경우 계속 진행
+            if (empty($error_message)) {
+                // 참여 멤버가 해당 프로젝트에 속했는지 확인
+                $checkMembershipQuery = $pdo->prepare("
+                    SELECT COUNT(*) FROM project_member 
+                    WHERE login_id = :login_id AND project_id = :project_id
+                ");
+                $checkMembershipQuery->execute([
                     ':login_id' => $login_id,
                     ':project_id' => $project_id
                 ]);
+                $isMember = $checkMembershipQuery->fetchColumn();
+
+                // 참여 멤버가 프로젝트에 속하지 않은 경우 추가
+                if (!$isMember) {
+                    $addMemberQuery = $pdo->prepare("
+                        INSERT INTO project_member (login_id, project_id, project_role)
+                        VALUES (:login_id, :project_id, 0) -- project_role 기본값은 0 (일반 멤버)
+                    ");
+                    $addMemberQuery->execute([
+                        ':login_id' => $login_id,
+                        ':project_id' => $project_id
+                    ]);
+                }
+
+                // 서브 테스크 추가
+                $stmt = $pdo->prepare("
+                    INSERT INTO sub_task (task_id, sub_task_name, description, start, end, min_days, login_id, pre_sub_task_id, is_completed)
+                    VALUES (:task_id, :sub_task_name, :description, :start, :end, :min_days, :login_id, :pre_sub_task_id, 0)
+                ");
+                $stmt->execute([
+                    ':task_id' => $task_id,
+                    ':sub_task_name' => $sub_task_name,
+                    ':description' => $description,
+                    ':start' => $start_date,
+                    ':end' => $end_date,
+                    ':min_days' => $min_days,
+                    ':login_id' => $login_id,
+                    ':pre_sub_task_id' => $pre_sub_task_id ?: null
+                ]);
+
+                // 성공적으로 추가되었으면 m_task.php로 리다이렉션 (task_id 전달)
+                header("Location: m_task.php?task_id=" . urlencode($task_id));
+                exit; // 반드시 exit를 추가하여 스크립트 실행 중단
             }
-
-            // 서브 테스크 추가
-            $stmt = $pdo->prepare("
-                INSERT INTO sub_task (task_id, sub_task_name, description, start, end, min_days, login_id, pre_sub_task_id, is_completed)
-                VALUES (:task_id, :sub_task_name, :description, :start, :end, :min_days, :login_id, :pre_sub_task_id, 0)
-            ");
-            $stmt->execute([
-                ':task_id' => $task_id,
-                ':sub_task_name' => $sub_task_name,
-                ':description' => $description,
-                ':start' => $start_date,
-                ':end' => $end_date,
-                ':min_days' => $min_days,
-                ':login_id' => $login_id,
-                ':pre_sub_task_id' => $pre_sub_task_id ?: null
-            ]);
-
-            // 성공적으로 추가되었으면 m_task.php로 리다이렉션 (task_id 전달)
-            header("Location: m_task.php?task_id=" . urlencode($task_id));
-            exit; // 반드시 exit를 추가하여 스크립트 실행 중단
         } catch (PDOException $e) {
             $error_message = "데이터 추가 중 오류가 발생했습니다: " . $e->getMessage();
         }
