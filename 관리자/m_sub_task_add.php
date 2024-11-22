@@ -183,6 +183,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </select><br><br>
 
         <button type="submit">추가하기</button>
+        <a href="m_task.php?task_id=<?= urlencode($task_id) ?>" 
+           style="margin-left: 10px; text-decoration: none; border: 1px solid #ccc; padding: 5px 10px; background-color: #f5f5f5; color: #333; border-radius: 5px;">
+           뒤로가기
+        </a>
     </form>
 </body>
 </html>
