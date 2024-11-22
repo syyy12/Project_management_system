@@ -1,4 +1,5 @@
 <?php
+# 수정완료 김동하
 session_start();
 include 'db.php';
 
@@ -228,6 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
                 <input type="password" name="password" id="password" required>
                 <button type="submit" name="delete_project" class="secondary">삭제</button>
             </form>
+<button class="primary" onclick="location.href='m_post.php?project_id=<?php echo $project_id; ?>'">게시판 글 목록</button>
             <button onclick="location.href='m_project_edit.php?project_id=<?php echo $project_id; ?>'">수정</button>
             <button onclick="location.href='m_home.php'">뒤로 가기</button>
         </div>
