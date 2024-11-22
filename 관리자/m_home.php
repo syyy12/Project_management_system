@@ -11,7 +11,7 @@ $projectResult = $conn->query($projectQuery);
 
 // 모든 게시글 조회 (최신순 정렬)
 $postQuery = "
-    SELECT p.id, p.title, p.created_date, p.updated_date, pr.project_name
+    SELECT p.id, p.title, p.created_date, p.updated_date, pr.project_name, pr.id AS project_id
     FROM Post AS p
     JOIN project AS pr ON p.project_id = pr.id
     ORDER BY COALESCE(p.updated_date, p.created_date) DESC
@@ -159,13 +159,14 @@ $postResult = $conn->query($postQuery);
                     while ($post = $postResult->fetch_assoc()) {
                         $postTitle = htmlspecialchars($post['title']);
                         $postId = $post['id'];
+                        $projectId = $post['project_id'];
                         $projectName = htmlspecialchars($post['project_name']);
                         $createdDate = $post['created_date'];
                         $updatedDate = $post['updated_date'];
                         $displayDate = $updatedDate ?? $createdDate;
 
-                        // 링크 수정: 항상 m_view_post.php로 이동
-                        echo "<li><a href='m_view_post.php?post_id={$postId}'>{$postTitle}</a> - $projectName ($displayDate)</li>";
+                        // 링크 수정: post_id와 project_id를 모두 전달
+                        echo "<li><a href='m_view_post.php?post_id={$postId}&project_id={$projectId}'>{$postTitle}</a> - $projectName ($displayDate)</li>";
                     }
                 } else {
                     echo "<li>게시글이 없습니다.</li>";
