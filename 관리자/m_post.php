@@ -1,4 +1,5 @@
 <?php
+# 추가
 session_start();
 include 'db.php';
 
