@@ -1,6 +1,5 @@
-
 <?php
-# 2024 11 22 수정 페이지 김동하
+# 수정해서 히스토리에 저장하는 찐 최종본 2024 11 23 김동하
 session_start();
 include 'db.php';
 
@@ -72,13 +71,19 @@ $subTasks = $subTaskStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 <input type="date" name="end" value="<?php echo $project['end']; ?>"><br>
 
         
-        <h3>테스크 수정</h3>
+<h3>테스크 수정</h3>
 <?php foreach ($tasks as $task): ?>
     <label>Task 이름:</label>
     <INPUT TYPE="text" NAME="tasks[<?php echo $task['id']; ?>][task_name]" VALUE="<?php echo htmlspecialchars($task['task_name']); ?>"><br>
     
     <label>설명:</label>
     <INPUT TYPE="text" NAME="tasks[<?php echo $task['id']; ?>][description]" VALUE="<?php echo htmlspecialchars($task['description']); ?>"><br>
+
+    <label>시작 날짜:</label>
+    <INPUT TYPE="date" NAME="tasks[<?php echo $task['id']; ?>][start]" VALUE="<?php echo htmlspecialchars($task['start']); ?>"><br>
+
+    <label>종료 날짜:</label>
+    <INPUT TYPE="date" NAME="tasks[<?php echo $task['id']; ?>][end]" VALUE="<?php echo htmlspecialchars($task['end']); ?>"><br>
 
     <!-- 삭제 체크박스 -->
     <label>
@@ -96,6 +101,12 @@ $subTasks = $subTaskStmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <label>설명:</label>
     <INPUT TYPE="text" NAME="sub_tasks[<?php echo $subTask['id']; ?>][description]" VALUE="<?php echo htmlspecialchars($subTask['description']); ?>"><br>
 
+    <label>시작 날짜:</label>
+    <INPUT TYPE="date" NAME="sub_tasks[<?php echo $subTask['id']; ?>][start]" VALUE="<?php echo htmlspecialchars($subTask['start']); ?>"><br>
+
+    <label>종료 날짜:</label>
+    <INPUT TYPE="date" NAME="sub_tasks[<?php echo $subTask['id']; ?>][end]" VALUE="<?php echo htmlspecialchars($subTask['end']); ?>"><br>
+
     <!-- 삭제 체크박스 -->
     <label>
         <input type="checkbox" name="sub_tasks[<?php echo $subTask['id']; ?>][is_deleted]" value="1">
@@ -103,6 +114,7 @@ $subTasks = $subTaskStmt->get_result()->fetch_all(MYSQLI_ASSOC);
     </label>
     <br><br>
 <?php endforeach; ?>
+
 
         
         <INPUT TYPE="submit" VALUE="저장">
