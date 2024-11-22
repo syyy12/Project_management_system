@@ -220,6 +220,13 @@ foreach ($independentTasks as $taskId => $taskGroup) {
                 <p><strong>설명:</strong> <?php echo htmlspecialchars($task['description']); ?></p>
                 <p><strong>시작일:</strong> <?php echo $task['start']; ?></p>
                 <p><strong>종료일:</strong> <?php echo $task['end']; ?></p>
+                <p><strong>상태:</strong>
+                    <?php if ($task['is_completed'] == 0): ?>
+                        <span style="color: #007BFF; font-weight: bold;">진행중</span>
+                    <?php elseif ($task['is_completed'] == 1): ?>
+                        <span style="color: #4CAF50; font-weight: bold;">완료</span>
+                    <?php endif; ?>
+                </p>
             </div>
             <button class="primary" style="margin-top: 80px; padding: 10px 20px; font-size: 16px; color: white; background-color: #004d99; border: none; border-radius: 4px; cursor: pointer;" onclick="location.href='m_sub_task_add.php?task_id=<?php echo $task_id; ?>'">
                 서브 테스크 추가
