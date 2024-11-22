@@ -1,239 +1,111 @@
+
 <?php
+# 2024 11 22 수정 페이지 김동하
 session_start();
 include 'db.php';
 
-// 로그인 여부 확인 및 관리자 권한 확인
-if (!isset($_SESSION['login_id']) || $_SESSION['role'] != 1) {
-    header("Location: login.php");
-    exit();
-}
-
+// 프로젝트 ID 확인
 $project_id = $_GET['project_id'] ?? null;
 if (!$project_id) {
-    die("잘못된 접근입니다.");
+    die("잘못된 접근입니다. 프로젝트 ID가 필요합니다.");
 }
 
-// 프로젝트 정보 조회
+// 프로젝트 정보 가져오기
 $projectQuery = "
-    SELECT project_name, description, start, end
+    SELECT id, project_name, description, start, end, finish
     FROM project
     WHERE id = ?
 ";
 $projectStmt = $conn->prepare($projectQuery);
 $projectStmt->bind_param("i", $project_id);
 $projectStmt->execute();
-$projectResult = $projectStmt->get_result();
-$project = $projectResult->fetch_assoc();
+$project = $projectStmt->get_result()->fetch_assoc();
 
 if (!$project) {
-    die("프로젝트 정보를 찾을 수 없습니다.");
+    die("프로젝트를 찾을 수 없습니다.");
 }
 
-// 현재 프로젝트 멤버 및 관리자 조회
-$memberQuery = "
-    SELECT pm.login_id, u.user_name, pm.project_role
-    FROM project_member pm
-    JOIN User u ON pm.login_id = u.login_id
-    WHERE pm.project_id = ?
+// Task 데이터 가져오기
+$taskQuery = "
+    SELECT id, task_name, description, start, end, is_completed, Notification_Percentage
+    FROM task
+    WHERE project_id = ?
 ";
-$memberStmt = $conn->prepare($memberQuery);
-$memberStmt->bind_param("i", $project_id);
-$memberStmt->execute();
-$memberResult = $memberStmt->get_result();
+$taskStmt = $conn->prepare($taskQuery);
+$taskStmt->bind_param("i", $project_id);
+$taskStmt->execute();
+$tasks = $taskStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-$currentMembers = [];
-$admin_id = null;
-
-while ($member = $memberResult->fetch_assoc()) {
-    if ($member['project_role'] == 1) { // 관리자
-        $admin_id = $member['login_id'];
-    }
-    $currentMembers[$member['login_id']] = $member['user_name'];
-}
-
-// 모든 사용자 조회 (시스템 관리자를 제외)
-$userQuery = "SELECT login_id, user_name FROM User WHERE role != 1";
-$userResult = $conn->query($userQuery);
-
-// 프로젝트 수정 처리
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $projectName = trim($_POST['project_name']);
-    $projectDescription = trim($_POST['project_description']);
-    $projectStart = trim($_POST['project_start']);
-    $projectEnd = trim($_POST['project_end']);
-    $projectAdmin = trim($_POST['project_admin']);
-    $projectMembers = $_POST['project_members'] ?? [];
-
-    // 프로젝트 수정 전 히스토리 저장
-    $versionQuery = "SELECT COALESCE(MAX(version), 0) + 1 AS next_version FROM project_history WHERE project_id = ?";
-    $versionStmt = $conn->prepare($versionQuery);
-    $versionStmt->bind_param("i", $project_id);
-    $versionStmt->execute();
-    $versionResult = $versionStmt->get_result();
-    $nextVersion = $versionResult->fetch_assoc()['next_version'];
-
-    $historyInsertQuery = "
-        INSERT INTO project_history (project_id, version, manager_name, description, start, end, modified_date)
-        VALUES (?, ?, ?, ?, ?, ?, NOW())
-    ";
-    $historyStmt = $conn->prepare($historyInsertQuery);
-    $managerName = $currentMembers[$admin_id] ?? 'N/A';
-    $historyStmt->bind_param(
-        "iissss",
-        $project_id,
-        $nextVersion,
-        $managerName,
-        $project['description'],
-        $project['start'],
-        $project['end']
-    );
-    $historyStmt->execute();
-
-    // 프로젝트 기본 정보 수정
-    $updateProjectQuery = "
-        UPDATE project
-        SET project_name = ?, description = ?, start = ?, end = ?
-        WHERE id = ?
-    ";
-    $updateProjectStmt = $conn->prepare($updateProjectQuery);
-    $updateProjectStmt->bind_param("ssssi", $projectName, $projectDescription, $projectStart, $projectEnd, $project_id);
-    $updateProjectStmt->execute();
-
-    // 기존 멤버 처리
-    $existingMemberIds = array_keys($currentMembers);
-    $newMembers = array_diff($projectMembers, $existingMemberIds); // 추가된 멤버
-    $removedMembers = array_diff($existingMemberIds, $projectMembers); // 삭제된 멤버
-
-    // 삭제된 멤버 제거
-    if (!empty($removedMembers)) {
-        $removeQuery = "DELETE FROM project_member WHERE project_id = ? AND login_id = ?";
-        $removeStmt = $conn->prepare($removeQuery);
-        foreach ($removedMembers as $removedMember) {
-            $removeStmt->bind_param("is", $project_id, $removedMember);
-            $removeStmt->execute();
-        }
-    }
-
-    // 추가된 멤버 삽입
-    if (!empty($newMembers)) {
-        $addQuery = "INSERT INTO project_member (project_id, login_id, project_role) VALUES (?, ?, ?)";
-        $addStmt = $conn->prepare($addQuery);
-        foreach ($newMembers as $newMember) {
-            $role = ($newMember === $projectAdmin) ? 1 : 0; // 관리자는 role=1
-            $addStmt->bind_param("isi", $project_id, $newMember, $role);
-            $addStmt->execute();
-        }
-    }
-
-    // 관리자 업데이트
-    $updateAdminQuery = "UPDATE project_member SET project_role = 1 WHERE project_id = ? AND login_id = ?";
-    $updateAdminStmt = $conn->prepare($updateAdminQuery);
-    $updateAdminStmt->bind_param("is", $project_id, $projectAdmin);
-    $updateAdminStmt->execute();
-
-    // 성공 메시지 및 리다이렉션
-    header("Location: m_project.php?project_id=$project_id");
-    exit();
-}
+// Sub-task 데이터 가져오기
+$subTaskQuery = "
+    SELECT id, task_id, sub_task_name, start, end, min_days, description, is_completed
+    FROM sub_task
+    WHERE task_id IN (SELECT id FROM task WHERE project_id = ?)
+";
+$subTaskStmt = $conn->prepare($subTaskQuery);
+$subTaskStmt->bind_param("i", $project_id);
+$subTaskStmt->execute();
+$subTasks = $subTaskStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>
 
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>프로젝트 수정</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .form-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            width: 400px;
-        }
-        h2 {
-            text-align: center;
-            color: #004d99;
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        input, textarea, select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        textarea {
-            height: 100px;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-    </style>
-</head>
-<body>
-    <div class="form-container">
-        <h2>프로젝트 수정</h2>
-        <form method="POST">
-            <label for="project_name">프로젝트 이름</label>
-            <input type="text" id="project_name" name="project_name" value="<?php echo htmlspecialchars($project['project_name']); ?>" required>
+<HTML>
+<HEAD>
+<META http-equiv="content-type" content="text/html; charset=utf-8">
+</HEAD>
+<BODY>
+    <h1>프로젝트 수정</h1>
+    <FORM METHOD="post" ACTION="process_project_edit.php">
+<!-- 숨겨진 프로젝트 ID 전달 -->
+    <input type="hidden" name="project_id" value="<?php echo $project_id; ?>">
 
-            <label for="project_description">프로젝트 설명</label>
-            <textarea id="project_description" name="project_description" required><?php echo htmlspecialchars($project['description']); ?></textarea>
+        <h3>프로젝트 정보</h3>
+        <label>프로젝트 이름:</label>
+        <INPUT TYPE="text" NAME="project_name" VALUE="<?php echo htmlspecialchars($project['project_name']); ?>"><br>
+        
+        <label>설명:</label>
+        <INPUT TYPE="text" NAME="description" VALUE="<?php echo htmlspecialchars($project['description']); ?>"><br>
+        
+       <label>시작 날짜:</label>
+<input type="date" name="start" value="<?php echo $project['start']; ?>"><br>
 
-            <label for="project_start">프로젝트 시작일</label>
-            <input type="date" id="project_start" name="project_start" value="<?php echo htmlspecialchars($project['start']); ?>" required>
+<label>종료 날짜:</label>
+<input type="date" name="end" value="<?php echo $project['end']; ?>"><br>
 
-            <label for="project_end">프로젝트 종료일</label>
-            <input type="date" id="project_end" name="project_end" value="<?php echo htmlspecialchars($project['end']); ?>" required>
+        
+        <h3>테스크 수정</h3>
+<?php foreach ($tasks as $task): ?>
+    <label>Task 이름:</label>
+    <INPUT TYPE="text" NAME="tasks[<?php echo $task['id']; ?>][task_name]" VALUE="<?php echo htmlspecialchars($task['task_name']); ?>"><br>
+    
+    <label>설명:</label>
+    <INPUT TYPE="text" NAME="tasks[<?php echo $task['id']; ?>][description]" VALUE="<?php echo htmlspecialchars($task['description']); ?>"><br>
 
-            <label for="project_admin">프로젝트 관리자</label>
-            <select id="project_admin" name="project_admin" required>
-                <?php while ($user = $userResult->fetch_assoc()): ?>
-                    <option value="<?php echo htmlspecialchars($user['login_id']); ?>" <?php echo ($user['login_id'] === $admin_id) ? 'selected' : ''; ?>>
-                        <?php echo htmlspecialchars($user['user_name']); ?>
-                    </option>
-                <?php endwhile; ?>
-            </select>
+    <!-- 삭제 체크박스 -->
+    <label>
+        <input type="checkbox" name="tasks[<?php echo $task['id']; ?>][is_deleted]" value="1">
+        삭제
+    </label>
+    <br><br>
+<?php endforeach; ?>
 
-            <label for="project_members">프로젝트 진행 멤버</label>
-            <select id="project_members" name="project_members[]" multiple required>
-                <?php
-                // 모든 사용자 다시 가져오기
-                $userResult->data_seek(0);
-                while ($user = $userResult->fetch_assoc()): ?>
-                    <option value="<?php echo htmlspecialchars($user['login_id']); ?>" <?php echo isset($currentMembers[$user['login_id']]) ? 'selected' : ''; ?>>
-                        <?php echo htmlspecialchars($user['user_name']); ?>
-                    </option>
-                <?php endwhile; ?>
-            </select>
+<h3>서브 테스크 수정</h3>
+<?php foreach ($subTasks as $subTask): ?>
+    <label>Sub-task 이름:</label>
+    <INPUT TYPE="text" NAME="sub_tasks[<?php echo $subTask['id']; ?>][sub_task_name]" VALUE="<?php echo htmlspecialchars($subTask['sub_task_name']); ?>"><br>
+    
+    <label>설명:</label>
+    <INPUT TYPE="text" NAME="sub_tasks[<?php echo $subTask['id']; ?>][description]" VALUE="<?php echo htmlspecialchars($subTask['description']); ?>"><br>
 
-            <button type="submit">수정 완료</button>
-        </form>
-    </div>
-</body>
-</html>
+    <!-- 삭제 체크박스 -->
+    <label>
+        <input type="checkbox" name="sub_tasks[<?php echo $subTask['id']; ?>][is_deleted]" value="1">
+        삭제
+    </label>
+    <br><br>
+<?php endforeach; ?>
+
+        
+        <INPUT TYPE="submit" VALUE="저장">
+    </FORM>
+</BODY>
+</HTML>
