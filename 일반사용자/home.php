@@ -1,5 +1,3 @@
-# 2024 11 21 16시 수정본 : 관리자 유무에 따라 m_view.php or view.php 구현 완료
-#                         소제목 [공지],[답글] 내용 구현
 <?php
 session_start();
 include 'db.php';
@@ -15,7 +13,7 @@ $user_name = $_SESSION['user_name'];
 
 // 참여 중인 프로젝트 목록 조회
 $projectQuery = "
-    SELECT pr.id, pr.project_name
+    SELECT pr.id, pr.project_name, pm.project_role
     FROM project AS pr
     JOIN project_member AS pm ON pr.id = pm.project_id
     WHERE pm.login_id = ?
@@ -149,7 +147,12 @@ while ($row = $managerResult->fetch_assoc()) {
                     while ($project = $projectResult->fetch_assoc()) {
                         $projectName = htmlspecialchars($project['project_name']);
                         $projectId = $project['id'];
-                        echo "<li><a href='project.php?project_id=$projectId'>$projectName</a></li>";
+                        $isManager = $project['project_role'] == 1; // 관리자 여부 확인
+
+                        // 관리자 여부에 따른 페이지 결정
+                        $targetPage = $isManager ? "m_project.php" : "project.php";
+
+                        echo "<li><a href='$targetPage?project_id=$projectId'>$projectName</a></li>";
                     }
                 } else {
                     echo "<li>참여 중인 프로젝트가 없습니다.</li>";
