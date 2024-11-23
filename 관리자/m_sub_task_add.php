@@ -1,9 +1,6 @@
 <?php
-// 데이터베이스 연결 설정
-$host = 'localhost'; // 데이터베이스 호스트
-$dbname = 'mydatabase'; // 데이터베이스 이름
-$username = 'root'; // 사용자 이름
-$password = ""; // 비밀번호
+session_start();
+include 'db.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
@@ -21,8 +18,8 @@ if (!$task_id) {
 
 // 현재 테스크의 project_id 가져오기
 try {
-    // user 테이블에서 참여 멤버 가져오기
-    $userQuery = $pdo->query("SELECT login_id, user_name FROM user");
+    // user 테이블에서 role=1인 사람은 제외하고 참여 멤버 가져오기
+    $userQuery = $pdo->query("SELECT login_id, user_name FROM user WHERE role != 1");
     $users = $userQuery->fetchAll(PDO::FETCH_ASSOC);
 
     // 현재 task_id를 기반으로 project_id 가져오기
