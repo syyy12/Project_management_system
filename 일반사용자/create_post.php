@@ -1,5 +1,4 @@
 <?php
-# 2024 11 21 : 1530 수정 디자인 밎 공지 유뮤 , 로그인 상시 확인 추가
 session_start();
 include 'db.php';
 
@@ -8,11 +7,15 @@ if (!isset($_SESSION['login_id'])) {
     header("Location: login.php");
     exit();
 }
+
 // 프로젝트 ID를 URL에서 가져오기
 $project_id = $_GET['project_id'] ?? null;
 if (!$project_id) {
     die("잘못된 접근입니다.");
 }
+
+// 현재 사용자 ID
+$current_user_id = $_SESSION['login_id'];
 
 // 프로젝트 이름 조회
 $projectName = '';
@@ -28,6 +31,30 @@ if ($projectResult->num_rows > 0) {
 } else {
     die("유효하지 않은 프로젝트 ID입니다.");
 }
+
+// 프로젝트 관리자 확인
+$managerQuery = "
+    SELECT COUNT(*) AS is_manager
+    FROM project_member
+    WHERE login_id = ? AND project_id = ? AND project_role = 1
+";
+$managerStmt = $conn->prepare($managerQuery);
+$managerStmt->bind_param("si", $current_user_id, $project_id);
+$managerStmt->execute();
+$managerResult = $managerStmt->get_result();
+$is_project_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
+
+// 시스템 관리자 확인
+$systemAdminQuery = "
+    SELECT role
+    FROM User
+    WHERE login_id = ?
+";
+$systemAdminStmt = $conn->prepare($systemAdminQuery);
+$systemAdminStmt->bind_param("s", $current_user_id);
+$systemAdminStmt->execute();
+$systemAdminResult = $systemAdminStmt->get_result();
+$is_system_admin = $systemAdminResult->fetch_assoc()['role'] == 1;
 
 // 사용자가 게시글을 작성해 등록하는 경우
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -47,7 +74,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("isssi", $project_id, $login_id, $title, $content, $is_noticed);
 
         if ($stmt->execute()) {
-            header("Location: post.php?project_id=$project_id"); // 게시판 목록으로 이동
+            // 권한에 따라 이동 경로 결정
+            if ($is_project_manager || $is_system_admin) {
+                header("Location: m_post.php?project_id=$project_id");
+            } else {
+                header("Location: post.php?project_id=$project_id");
+            }
             exit();
         } else {
             $error = "게시글 등록 중 문제가 발생했습니다. 다시 시도해주세요.";
@@ -132,12 +164,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="content">내용:</label>
                 <textarea id="content" name="content" rows="10" placeholder="내용을 입력하세요" required></textarea>
             </div>
-            <div>
-                <label for="is_notice">
-                    <input type="checkbox" id="is_notice" name="is_notice">
-                    공지로 등록
-                </label>
-            </div>
+            <?php if ($is_project_manager || $is_system_admin): ?>
+                <div>
+                    <label for="is_notice">
+                        <input type="checkbox" id="is_notice" name="is_notice">
+                        공지로 등록
+                    </label>
+                </div>
+            <?php endif; ?>
             <div class="buttons">
                 <button type="submit" class="primary">등록</button>
                 <button type="button" class="secondary" onclick="location.href='post.php?project_id=<?php echo $project_id; ?>'">취소</button>
