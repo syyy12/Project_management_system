@@ -1,5 +1,4 @@
 <?php
-# 수정완료 김동하
 session_start();
 include 'db.php';
 
@@ -18,9 +17,10 @@ if (!$project_id) {
 // 프로젝트 기본 정보 조회 (현재 프로젝트 또는 특정 히스토리)
 if ($version) {
     $projectQuery = "
-        SELECT description, start, end, manager_name, modified_date
-        FROM project_history
-        WHERE project_id = ? AND version = ?
+        SELECT p.project_name, ph.description, ph.start, ph.end, ph.manager_name, ph.modified_date
+        FROM project_history ph
+        JOIN project p ON p.id = ph.project_id
+        WHERE ph.project_id = ? AND ph.version = ?
     ";
     $projectStmt = $conn->prepare($projectQuery);
     $projectStmt->bind_param("ii", $project_id, $version);
@@ -67,18 +67,18 @@ while ($row = $membersResult->fetch_assoc()) {
 if ($version) {
     // 과거 수정본에 해당하는 테스크 조회
     $taskQuery = "
-        SELECT task_name, description
-        FROM task_history
-        WHERE project_id = ? AND version = ?
+        SELECT th.task_id, th.task_name, th.description
+        FROM task_history th
+        WHERE th.project_id = ? AND th.version = ?
     ";
     $taskStmt = $conn->prepare($taskQuery);
     $taskStmt->bind_param("ii", $project_id, $version);
 } else {
     // 현재 수정본의 테스크 조회
     $taskQuery = "
-        SELECT id, task_name, is_completed
-        FROM task
-        WHERE project_id = ?
+        SELECT t.id AS task_id, t.task_name, t.is_completed
+        FROM task t
+        WHERE t.project_id = ?
     ";
     $taskStmt = $conn->prepare($taskQuery);
     $taskStmt->bind_param("i", $project_id);
@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
 </head>
 <body>
     <div class="container">
-        <h1><?php echo htmlspecialchars($version ? $project['description'] : $project['project_name']); ?></h1>
+        <h1><?php echo htmlspecialchars($project['project_name']); ?></h1>
 
         <div class="section">
             <h2>프로젝트 정보</h2>
@@ -181,31 +181,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
         <div class="section tasks">
             <h2>테스크 목록</h2>
             <ul>
-                <?php if ($version): ?>
-                    <!-- 과거 수정본 테스크 표시 -->
-                    <?php foreach ($tasks as $task): ?>
-                        <li>
-                            <strong><?php echo htmlspecialchars($task['task_name']); ?></strong> - 
-                            <span><?php echo htmlspecialchars($task['description']); ?></span>
-                        </li>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <!-- 현재 테스크 표시 -->
-                    <?php foreach ($tasks as $task): ?>
-                        <li>
-                            <a href="m_task.php?task_id=<?php echo $task['id']; ?>">
-                                <?php echo htmlspecialchars($task['task_name']); ?>
-                            </a> - 
-                            <span class="<?php echo $task['is_completed'] === 3 ? 'completed' : 'in-progress'; ?>">
-                                <?php echo ($task['is_completed'] === 3) ? '완료' : '진행 중'; ?>
-                            </span>
-                        </li>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                <?php foreach ($tasks as $task): ?>
+                    <li>
+                        <a href="m_task<?php echo $version ? '_history' : ''; ?>.php?project_id=<?php echo $project_id; ?>&version=<?php echo $version; ?>&task_id=<?php echo $task['task_id']; ?>">
+                            <?php echo htmlspecialchars($task['task_name']); ?>
+                        </a> - 
+                        <span><?php echo htmlspecialchars($task['description'] ?? ''); ?></span>
+                    </li>
+                <?php endforeach; ?>
             </ul>
 
             <?php if (!$version): ?>
-                <!-- 현재 수정본에서만 테스크 추가 버튼 표시 -->
                 <button onclick="location.href='m_task_add.php?project_id=<?php echo $project_id; ?>'" 
                         style="background-color: #004d99; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">
                     +테스크 추가
@@ -227,9 +213,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
                 <?php endif; ?>
                 <label for="password">비밀번호 확인</label>
                 <input type="password" name="password" id="password" required>
-                <button type="submit" name="delete_project" class="secondary">삭제</button>
+                <buttAZon type="submit" name="delete_project" class="secondary">삭제</button>
             </form>
-<button class="primary" onclick="location.href='m_post.php?project_id=<?php echo $project_id; ?>'">게시판 글 목록</button>
+            <button class="primary" onclick="location.href='m_post.php?project_id=<?php echo $project_id; ?>'">게시판 글 목록</button>
             <button onclick="location.href='m_project_edit.php?project_id=<?php echo $project_id; ?>'">수정</button>
             <button onclick="location.href='m_home.php'">뒤로 가기</button>
         </div>
