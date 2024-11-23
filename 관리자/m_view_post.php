@@ -46,22 +46,22 @@ $managerStmt->execute();
 $managerResult = $managerStmt->get_result();
 $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
 
-// 게시글 작성자가 시스템 관리자 여부 확인
-$authorRoleQuery = "
+// 현재 사용자가 시스템 관리자 여부 확인
+$userRoleQuery = "
     SELECT role
     FROM User
     WHERE login_id = ?
 ";
-$authorRoleStmt = $conn->prepare($authorRoleQuery);
-$authorRoleStmt->bind_param("s", $post['author_id']);
-$authorRoleStmt->execute();
-$authorRoleResult = $authorRoleStmt->get_result();
-$authorRole = $authorRoleResult->fetch_assoc()['role'] ?? 0;
+$userRoleStmt = $conn->prepare($userRoleQuery);
+$userRoleStmt->bind_param("s", $current_user_id);
+$userRoleStmt->execute();
+$userRoleResult = $userRoleStmt->get_result();
+$userRole = $userRoleResult->fetch_assoc()['role'] ?? 0;
 
-$is_author_system_admin = ($authorRole == 1);
+$is_system_admin = ($userRole == 1);
 
 // 삭제/수정 버튼 비활성화 조건
-$disable_actions = ($is_manager && $is_author_system_admin);
+$disable_actions = ($is_manager && $post['author_id'] !== $current_user_id);
 ?>
 
 <!DOCTYPE html>
@@ -142,6 +142,14 @@ $disable_actions = ($is_manager && $is_author_system_admin);
             background-color: #c9302c;
         }
 
+        button.primary {
+            background-color: #0275d8;
+        }
+
+        button.primary:hover {
+            background-color: #025aa5;
+        }
+
         button.disabled {
             background-color: #cccccc;
             cursor: not-allowed;
@@ -175,8 +183,8 @@ $disable_actions = ($is_manager && $is_author_system_admin);
             </form>
             <!-- 수정 버튼 -->
             <button class="secondary" onclick="location.href='post_update.php?post_id=<?php echo htmlspecialchars($post_id); ?>&project_id=<?php echo htmlspecialchars($project_id); ?>'" <?php echo $disable_actions ? 'disabled' : ''; ?>>수정</button>
-            <!-- 첨부파일 버튼 -->
-            <button class="disabled" disabled>첨부파일</button>
+            <!-- 뒤로가기 버튼 -->
+            <button class="primary" onclick="location.href='<?php echo ($is_system_admin || $is_manager) ? 'm_post.php' : 'post.php'; ?>?project_id=<?php echo htmlspecialchars($project_id); ?>'">뒤로가기</button>
         </div>
     </div>
 </body>
