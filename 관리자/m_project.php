@@ -1,5 +1,5 @@
 <?php
-# 수정 토요일 
+# 2024 11 24
 session_start();
 include 'db.php';
 
