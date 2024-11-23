@@ -79,6 +79,18 @@ $managerStmt->bind_param("is", $project_id, $current_user_id);
 $managerStmt->execute();
 $managerResult = $managerStmt->get_result();
 $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
+
+// 시스템 관리자 확인 쿼리
+$systemAdminQuery = "
+    SELECT role
+    FROM User
+    WHERE login_id = ?
+";
+$systemAdminStmt = $conn->prepare($systemAdminQuery);
+$systemAdminStmt->bind_param("s", $current_user_id);
+$systemAdminStmt->execute();
+$systemAdminResult = $systemAdminStmt->get_result();
+$is_system_admin = $systemAdminResult->fetch_assoc()['role'] == 1;
 ?>
 
 <!DOCTYPE html>
@@ -252,9 +264,9 @@ $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
                                 </div>
                             </div>";
 
-                        // 삭제 버튼 추가 (관리자만 표시)
-                        if ($is_manager) {
-                            echo "<form action='post_delete.php' method='GET' style='margin: 0;'>
+                        // 삭제 버튼 추가 (관리자 및 시스템 관리자 표시)
+                        if ($is_manager || $is_system_admin) {
+                            echo "<form action='post_delete.php' method='GET' style='margin: 0;' >
                                 <input type='hidden' name='post_id' value='$postId'>
                                 <input type='hidden' name='project_id' value='$project_id'>
                                 <button type='submit' class='delete'>삭제</button>
@@ -273,7 +285,6 @@ $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
         <!-- 버튼들 -->
         <div class="buttons">
             <button class="primary" onclick="location.href='create_post.php?project_id=<?php echo $project_id; ?>'">글 쓰기</button>
-            
         </div>
     </div>
 </body>
