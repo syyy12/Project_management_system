@@ -17,9 +17,6 @@ if (!$post_id || !$project_id) {
 // 현재 사용자 ID
 $current_user_id = $_SESSION['login_id'];
 
-// 현재 사용자 시스템 관리자 여부 확인
-$is_system_admin = $_SESSION['is_system_admin'] ?? false;
-
 // 게시글 정보 조회
 $postQuery = "
     SELECT p.title, p.content, p.created_date, p.updated_date, u.user_name, p.login_id AS author_id
@@ -37,9 +34,6 @@ if (!$post) {
     die("게시글을 찾을 수 없습니다.");
 }
 
-// 현재 사용자가 게시글 작성자인지 확인
-$is_author = $post['author_id'] === $current_user_id;
-
 // 현재 사용자가 프로젝트 관리자 여부 확인
 $managerQuery = "
     SELECT COUNT(*) AS is_manager
@@ -52,17 +46,22 @@ $managerStmt->execute();
 $managerResult = $managerStmt->get_result();
 $is_manager = $managerResult->fetch_assoc()['is_manager'] ?? 0;
 
-// 현재 사용자의 role 값 확인
-$userRoleQuery = "
+// 게시글 작성자가 시스템 관리자 여부 확인
+$authorRoleQuery = "
     SELECT role
     FROM User
     WHERE login_id = ?
 ";
-$userRoleStmt = $conn->prepare($userRoleQuery);
-$userRoleStmt->bind_param("s", $current_user_id);
-$userRoleStmt->execute();
-$userRoleResult = $userRoleStmt->get_result();
-$userRole = $userRoleResult->fetch_assoc()['role'] ?? 0;
+$authorRoleStmt = $conn->prepare($authorRoleQuery);
+$authorRoleStmt->bind_param("s", $post['author_id']);
+$authorRoleStmt->execute();
+$authorRoleResult = $authorRoleStmt->get_result();
+$authorRole = $authorRoleResult->fetch_assoc()['role'] ?? 0;
+
+$is_author_system_admin = ($authorRole == 1);
+
+// 삭제/수정 버튼 비활성화 조건
+$disable_actions = ($is_manager && $is_author_system_admin);
 ?>
 
 <!DOCTYPE html>
@@ -168,12 +167,15 @@ $userRole = $userRoleResult->fetch_assoc()['role'] ?? 0;
 
         <!-- 버튼들 -->
         <div class="buttons">
+            <!-- 삭제 버튼 -->
             <form method="GET" action="post_delete.php" style="display: inline;">
                 <input type="hidden" name="post_id" value="<?php echo htmlspecialchars($post_id); ?>">
                 <input type="hidden" name="project_id" value="<?php echo htmlspecialchars($project_id); ?>">
-                <button type="submit" class="danger">삭제</button>
+                <button type="submit" class="danger" <?php echo $disable_actions ? 'disabled' : ''; ?>>삭제</button>
             </form>
-            <button class="secondary" onclick="location.href='post_update.php?post_id=<?php echo htmlspecialchars($post_id); ?>&project_id=<?php echo htmlspecialchars($project_id); ?>'">수정</button>
+            <!-- 수정 버튼 -->
+            <button class="secondary" onclick="location.href='post_update.php?post_id=<?php echo htmlspecialchars($post_id); ?>&project_id=<?php echo htmlspecialchars($project_id); ?>'" <?php echo $disable_actions ? 'disabled' : ''; ?>>수정</button>
+            <!-- 첨부파일 버튼 -->
             <button class="disabled" disabled>첨부파일</button>
         </div>
     </div>
