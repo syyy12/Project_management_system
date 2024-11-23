@@ -163,7 +163,6 @@ while ($row = $allSubTaskResult->fetch_assoc()) {
             <h2><?php echo htmlspecialchars($subTask['sub_task_name']); ?></h2>
             <!-- 수정 및 삭제 버튼 -->
             <div class="action-buttons">
-                <button class="edit" onclick="location.href='m_sub_task_edit.php?sub_task_id=<?php echo htmlspecialchars($sub_task_id); ?>'">수정</button>
                 <button class="delete" onclick="if(confirm('정말 삭제하시겠습니까?')) location.href='?sub_task_id=<?php echo htmlspecialchars($sub_task_id); ?>&task_id=<?php echo htmlspecialchars($task_id); ?>&action=delete'">삭제</button>
             </div>
         </div>
