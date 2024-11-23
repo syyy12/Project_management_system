@@ -95,17 +95,21 @@ $subTasks = $subTaskStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 <h3>서브 테스크 수정</h3>
 <?php foreach ($subTasks as $subTask): ?>
-    <label>Sub-task 이름:</label>
-    <INPUT TYPE="text" NAME="sub_tasks[<?php echo $subTask['id']; ?>][sub_task_name]" VALUE="<?php echo htmlspecialchars($subTask['sub_task_name']); ?>"><br>
+  <label>Sub-task 이름:</label>
+    <input type="text" name="sub_tasks[<?php echo $subTask['id']; ?>][sub_task_name]" 
+           value="<?php echo htmlspecialchars($subTask['sub_task_name']); ?>"><br>
     
     <label>설명:</label>
-    <INPUT TYPE="text" NAME="sub_tasks[<?php echo $subTask['id']; ?>][description]" VALUE="<?php echo htmlspecialchars($subTask['description']); ?>"><br>
+    <input type="text" name="sub_tasks[<?php echo $subTask['id']; ?>][description]" 
+           value="<?php echo htmlspecialchars($subTask['description']); ?>"><br>
 
     <label>시작 날짜:</label>
-    <INPUT TYPE="date" NAME="sub_tasks[<?php echo $subTask['id']; ?>][start]" VALUE="<?php echo htmlspecialchars($subTask['start']); ?>"><br>
+    <input type="date" name="sub_tasks[<?php echo $subTask['id']; ?>][start]" 
+           value="<?php echo htmlspecialchars($subTask['start']); ?>"><br>
 
     <label>종료 날짜:</label>
-    <INPUT TYPE="date" NAME="sub_tasks[<?php echo $subTask['id']; ?>][end]" VALUE="<?php echo htmlspecialchars($subTask['end']); ?>"><br>
+    <input type="date" name="sub_tasks[<?php echo $subTask['id']; ?>][end]" 
+           value="<?php echo htmlspecialchars($subTask['end']); ?>"><br>
 
     <!-- 삭제 체크박스 -->
     <label>
