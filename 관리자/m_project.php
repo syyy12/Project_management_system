@@ -1,4 +1,5 @@
 <?php
+# 수정 토요일 
 session_start();
 include 'db.php';
 
@@ -154,6 +155,136 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($version ? "수정본 - {$project['description']}" : $project['project_name']); ?> - 관리자</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            color: #343a40;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 20px;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        p {
+            font-size: 16px;
+            color: #495057;
+            line-height: 1.6;
+        }
+
+        .tasks ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .tasks ul li {
+            margin-bottom: 10px;
+        }
+
+        .tasks ul li a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .tasks ul li a:hover {
+            text-decoration: underline;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button.primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        button.primary:hover {
+            background-color: #0056b3;
+        }
+
+        button.secondary {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        button.secondary:hover {
+            background-color: #c82333;
+        }
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        input[type="password"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-container {
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 30px;
+        }
+
+        .progress-bar {
+            background: #007bff;
+            color: white;
+            text-align: center;
+            height: 100%;
+            line-height: 30px;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -185,15 +316,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
                     <li>
                         <a href="m_task<?php echo $version ? '_history' : ''; ?>.php?project_id=<?php echo $project_id; ?>&version=<?php echo $version; ?>&task_id=<?php echo $task['task_id']; ?>">
                             <?php echo htmlspecialchars($task['task_name']); ?>
-                        </a> - 
-                        <span><?php echo htmlspecialchars($task['description'] ?? ''); ?></span>
+                        </a>
                     </li>
                 <?php endforeach; ?>
             </ul>
 
             <?php if (!$version): ?>
-                <button onclick="location.href='m_task_add.php?project_id=<?php echo $project_id; ?>'" 
-                        style="background-color: #004d99; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">
+                <button onclick="location.href='m_task_add.php?project_id=<?php echo $project_id; ?>'" class="primary">
                     +테스크 추가
                 </button>
             <?php endif; ?>
@@ -202,7 +331,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
         <div class="section">
             <h2>진행 현황</h2>
             <div class="progress-bar-container">
-                <div class="progress-bar"><?php echo $progress; ?>%</div>
+                <div class="progress-bar" style="width: <?php echo $progress; ?>%;">
+                    <?php echo $progress; ?>%
+                </div>
             </div>
         </div>
 
@@ -213,11 +344,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
                 <?php endif; ?>
                 <label for="password">비밀번호 확인</label>
                 <input type="password" name="password" id="password" required>
-                <buttAZon type="submit" name="delete_project" class="secondary">삭제</button>
+                <button type="submit" name="delete_project" class="secondary">삭제</button>
             </form>
             <button class="primary" onclick="location.href='m_post.php?project_id=<?php echo $project_id; ?>'">게시판 글 목록</button>
-            <button onclick="location.href='m_project_edit.php?project_id=<?php echo $project_id; ?>'">수정</button>
-            <button onclick="location.href='m_home.php'">뒤로 가기</button>
+            <button class="primary" onclick="location.href='m_project_edit.php?project_id=<?php echo $project_id; ?>'">수정</button>
+            <button class="primary" onclick="location.href='m_home.php'">뒤로 가기</button>
         </div>
     </div>
 </body>
