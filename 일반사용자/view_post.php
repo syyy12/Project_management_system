@@ -129,7 +129,11 @@ if (!$post) {
 
         <!-- 버튼들 -->
         <div class="buttons">
+            <!-- 답글 버튼 -->
+            <button class="primary" onclick="location.href='create_post.php?project_id=<?php echo $project_id; ?>&parent_post_id=<?php echo $post_id; ?>'">답글</button>
+            <!-- 목록 버튼 -->
             <button class="primary" onclick="location.href='post.php?project_id=<?php echo $project_id; ?>'">목록</button>
+            <!-- 첨부파일 버튼 -->
             <button class="disabled" disabled>첨부파일</button>
         </div>
     </div>
