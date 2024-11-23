@@ -101,21 +101,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "설명을 입력해주세요.";
     }
 
-    // **추가된 로직**: 선행 테스크 검증
+    // 선행 테스크 검증
     if (!empty($pre_sub_task_id)) {
-        $preTaskConflictQuery = "
-            SELECT COUNT(*) AS conflict_count 
-            FROM sub_task 
-            WHERE pre_sub_task_id = ? AND id != ?
-        ";
-        $conflictStmt = $conn->prepare($preTaskConflictQuery);
-        $conflictStmt->bind_param("ii", $pre_sub_task_id, $sub_task_id);
-        $conflictStmt->execute();
-        $conflictResult = $conflictStmt->get_result();
-        $conflictCount = $conflictResult->fetch_assoc()['conflict_count'];
+        // 기존 값인지 확인
+        if ($pre_sub_task_id != $subTask['pre_sub_task_id']) {
+            $preTaskConflictQuery = "
+                SELECT COUNT(*) AS conflict_count 
+                FROM sub_task 
+                WHERE pre_sub_task_id = ? AND id != ?
+            ";
+            $conflictStmt = $conn->prepare($preTaskConflictQuery);
+            $conflictStmt->bind_param("ii", $pre_sub_task_id, $sub_task_id);
+            $conflictStmt->execute();
+            $conflictResult = $conflictStmt->get_result();
+            $conflictCount = $conflictResult->fetch_assoc()['conflict_count'];
 
-        if ($conflictCount > 0) {
-            $errors[] = "선택한 선행 테스크는 이미 다른 서브 테스크에서 사용 중입니다.";
+            if ($conflictCount > 0) {
+                $errors[] = "선택한 선행 테스크는 이미 다른 서브 테스크에서 사용 중입니다.";
+            }
         }
     }
 
