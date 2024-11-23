@@ -1,5 +1,5 @@
 <?php
-# 2024 11 24
+# 시헌 카톡 해결 김동하
 session_start();
 include 'db.php';
 
@@ -14,6 +14,24 @@ $version = $_GET['version'] ?? null; // 특정 수정본 조회
 if (!$project_id) {
     die("잘못된 접근입니다.");
 }
+
+// 현재 사용자의 role 확인
+$roleQuery = "
+    SELECT role
+    FROM user
+    WHERE login_id = ?
+";
+$roleStmt = $conn->prepare($roleQuery);
+$roleStmt->bind_param("s", $_SESSION['login_id']);
+$roleStmt->execute();
+$roleResult = $roleStmt->get_result();
+$user = $roleResult->fetch_assoc();
+
+if (!$user) {
+    die("사용자 정보를 찾을 수 없습니다.");
+}
+
+$userRole = $user['role'];
 
 // 프로젝트 기본 정보 조회 (현재 프로젝트 또는 특정 히스토리)
 if ($version) {
@@ -46,7 +64,7 @@ if (!$project) {
 $membersQuery = "
     SELECT pm.login_id, u.user_name, pm.project_role
     FROM project_member pm
-    JOIN User u ON pm.login_id = u.login_id
+    JOIN user u ON pm.login_id = u.login_id
     WHERE pm.project_id = ?
 ";
 $membersStmt = $conn->prepare($membersQuery);
@@ -121,7 +139,7 @@ while ($history = $historyResult->fetch_assoc()) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
     $password = $_POST['password'] ?? '';
     
-    $userQuery = "SELECT password FROM User WHERE login_id = ?";
+    $userQuery = "SELECT password FROM user WHERE login_id = ?";
     $userStmt = $conn->prepare($userQuery);
     $userStmt->bind_param("s", $_SESSION['login_id']);
     $userStmt->execute();
@@ -285,6 +303,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
             margin-bottom: 20px;
         }
     </style>
+    <script>
+        function handleBackButton() {
+            <?php if ($userRole == 1): ?>
+                window.location.href = "m_home.php";
+            <?php else: ?>
+                window.location.href = "home.php";
+            <?php endif; ?>
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -348,7 +375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project'])) {
             </form>
             <button class="primary" onclick="location.href='m_post.php?project_id=<?php echo $project_id; ?>'">게시판 글 목록</button>
             <button class="primary" onclick="location.href='m_project_edit.php?project_id=<?php echo $project_id; ?>'">수정</button>
-            <button class="primary" onclick="location.href='m_home.php'">뒤로 가기</button>
+            <button class="primary" onclick="handleBackButton()">뒤로 가기</button>
         </div>
     </div>
 </body>
