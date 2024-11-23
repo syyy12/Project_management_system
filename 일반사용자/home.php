@@ -1,4 +1,5 @@
 <?php
+# 병합 완료 시헌 + 동하
 session_start();
 include 'db.php';
 
@@ -119,6 +120,7 @@ while ($task = $taskResult->fetch_assoc()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>홈페이지</title>
     <style>
+        /* 전체 레이아웃 */
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f2f5;
@@ -195,7 +197,7 @@ while ($task = $taskResult->fetch_assoc()) {
         <h2>(주) 영남대학</h2>
     </div>
     <div class="content">
-        <!-- 프로젝트 목록 -->
+       <!-- 프로젝트 목록 -->
         <div class="section">
             <h3>📂 프로젝트 목록</h3>
             <ul>
@@ -204,11 +206,7 @@ while ($task = $taskResult->fetch_assoc()) {
                     while ($project = $projectResult->fetch_assoc()) {
                         $projectName = htmlspecialchars($project['project_name']);
                         $projectId = $project['id'];
-                        $isManager = $project['project_role'] == 1;
-
-                        $targetPage = $isManager ? "m_project.php" : "project.php";
-
-                        echo "<li><a href='$targetPage?project_id=$projectId'>$projectName</a></li>";
+                        echo "<li><a href='project.php?project_id=$projectId'>$projectName</a></li>";
                     }
                 } else {
                     echo "<li>참여 중인 프로젝트가 없습니다.</li>";
@@ -217,7 +215,7 @@ while ($task = $taskResult->fetch_assoc()) {
             </ul>
         </div>
 
-        <!-- 게시글 목록 -->
+       <!-- 게시글 목록 -->
         <div class="section">
             <h3>📝 전체 게시판</h3>
             <ul>
@@ -225,17 +223,42 @@ while ($task = $taskResult->fetch_assoc()) {
                 if ($postResult->num_rows > 0) {
                     while ($post = $postResult->fetch_assoc()) {
                         $postTitle = htmlspecialchars($post['title']);
-                        $postId = $post['id'];
-                        $projectId = $post['project_id'];
+                        $postId = $post['id']; // 게시글 ID
+                        $postParentId = $post['Post_id']; // 답글의 원글 ID
+                        $isNoticed = $post['is_noticed']; // 공지 여부
+                        $projectId = $post['project_id']; // 프로젝트 ID
                         $projectName = htmlspecialchars($post['project_name']);
-                        $displayDate = $post['updated_date'] ?? $post['created_date'];
+                        $createdDate = $post['created_date'];
+                        $updatedDate = $post['updated_date'];
+                        $displayDate = $updatedDate ?? $createdDate;
+                        $isManager = $post['project_role'] == 1; // 매니저 여부 확인
 
-                        if ($post['is_noticed'] == 1) {
+                        // 공지사항 확인
+                        if ($isNoticed) {
                             $postTitle = "[공지] $postTitle";
                         }
 
-                        $targetPage = ($post['author_id'] === $login_id) ? "m_view_post.php" : "view_post.php";
+                        // 답글 여부를 확인하여 제목 변경
+                        if ($postParentId) {
+                            // 원글 제목 가져오기
+                            $parentQuery = "SELECT title FROM post WHERE id = ?";
+                            $parentStmt = $conn->prepare($parentQuery);
+                            $parentStmt->bind_param("i", $postParentId);
+                            $parentStmt->execute();
+                            $parentResult = $parentStmt->get_result();
 
+                            if ($parentResult->num_rows > 0) {
+                                $parentRow = $parentResult->fetch_assoc();
+                                $parentTitle = htmlspecialchars($parentRow['title']);
+                                $postTitle = "[답글: $parentTitle] $postTitle";
+                            }
+                            $parentStmt->close();
+                        }
+
+                        // 매니저 여부에 따른 페이지 결정
+                        $targetPage = $isManager ? "m_view_post.php" : "view_post.php";
+
+                        // 게시글 출력
                         echo "<li><a href='$targetPage?post_id=$postId&project_id=$projectId'>$postTitle</a> - $projectName ($displayDate)</li>";
                     }
                 } else {
@@ -245,6 +268,8 @@ while ($task = $taskResult->fetch_assoc()) {
             </ul>
         </div>
     </div>
+
+    <!-- 로그아웃 버튼 -->
     <button class="logout-button" onclick="location.href='logout.php'">로그아웃</button>
 </body>
 </html>
