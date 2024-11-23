@@ -175,6 +175,8 @@ $disable_actions = ($is_manager && $post['author_id'] !== $current_user_id);
 
         <!-- 버튼들 -->
         <div class="buttons">
+            <!-- 답글 버튼 -->
+            <button class="primary" onclick="location.href='create_post.php?project_id=<?php echo $project_id; ?>&parent_post_id=<?php echo $post_id; ?>'">답글</button>
             <!-- 삭제 버튼 -->
             <form method="GET" action="post_delete.php" style="display: inline;">
                 <input type="hidden" name="post_id" value="<?php echo htmlspecialchars($post_id); ?>">
