@@ -1,5 +1,4 @@
 <?php
-# 시헌 카톡 해결 김동하
 session_start();
 include 'db.php';
 
