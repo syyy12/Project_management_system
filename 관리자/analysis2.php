@@ -1,3 +1,4 @@
+# 11/24 php 연결 수정
 <?php
 // 데이터베이스 연결 설정
 $servername = "localhost";
@@ -185,6 +186,6 @@ $conn->close();
     </main>
 
     <!-- 뒤로가기 버튼 -->
-    <button class="back-btn" onclick="window.location.href='analysis1.php'">뒤로가기</button>
+    <button class="back-btn" onclick="window.location.href='analysis.php'">뒤로가기</button>
 </body>
 </html>
