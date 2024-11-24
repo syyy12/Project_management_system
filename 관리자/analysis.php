@@ -1,3 +1,4 @@
+# 11/24 데이터베이스 연결 수정
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -308,13 +309,8 @@
             <div class="success-rate">
                 <?php
                 // 데이터베이스 연결 설정
-                $servername = "localhost";
-                $username = "root";
-                $password = "";
-                $dbname = "mydatabase";
-
-                // MySQL 연결 생성
-                $conn = new mysqli($servername, $username, $password, $dbname);
+                session_start();
+                include 'db.php';
 
                 if ($conn->connect_error) {
                     die("연결 실패: " . $conn->connect_error);
