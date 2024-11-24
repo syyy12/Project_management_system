@@ -1,13 +1,8 @@
-# 11/24 php 연결 수정
+# 11/24 데이터베이스 연결 수정
 <?php
 // 데이터베이스 연결 설정
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "mydatabase";
-
-// 데이터베이스 연결 생성
-$conn = new mysqli($servername, $username, $password, $dbname);
+session_start();
+include 'db.php';
 
 // 연결 확인
 if ($conn->connect_error) {
