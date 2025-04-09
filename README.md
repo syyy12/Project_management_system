@@ -20,7 +20,7 @@
 - 일반 사용자 및 시스템 관리자가 로그인할 수 있는 페이지입니다.
 - 관리자는 체크박스를 통해 관리자 권한으로 로그인합니다.
 
-![login](./img1.png)
+![login](./img/img1.png)
 
 ---
 
@@ -28,14 +28,14 @@
 - 아이디, 비밀번호, 이름을 입력하여 회원가입을 진행합니다.
 - 체크박스를 통해 관리자 권한 부여 여부를 설정할 수 있습니다.
 
-![register](./img2.png)
+![register](./img/img2.png)
 
 ---
 
 ### ❌ 3. 관리자 권한 오류 메시지
 - 관리자 권한 없이 관리자 계정으로 로그인 시 오류 메시지가 출력됩니다.
 
-![admin_login_error](./img3.png)
+![admin_login_error](./img/img3.png)
 
 ---
 
@@ -43,49 +43,49 @@
 - 전체 프로젝트 목록 확인 및 생성 가능
 - 게시판 접근 가능
 
-![admin_home](./img4.png)
+![admin_home](./img/img4.png)
 
 ---
 
 ### 👤 5. 일반 사용자 홈 페이지 (`home.php`)
 - 본인이 참여 중인 프로젝트 및 전체 게시글 확인 가능
 
-![user_home](./img5.png)
+![user_home](./img/img5.png)
 
 ---
 
 ### 🆕 6. 프로젝트 생성 페이지 (`m_create.php`)
 - 프로젝트 이름, 설명, 일정, 참여 인원 등을 입력하여 프로젝트를 생성합니다.
 
-![create_project](./img6.png)
+![create_project](./img/img6.png)
 
 ---
 
 ### 📄 7. 프로젝트 상세 페이지 (`m_project.php`)
 - 프로젝트 정보, 테스크 목록, 진행률, 게시판 접근 등 전반적인 내용을 확인할 수 있습니다.
 
-![project_detail](./img7.png)
+![project_detail](./img/img7.png)
 
 ---
 
 ### ➕ 8. 테스크 추가 페이지 (`m_task_add.php`)
 - 테스크 이름, 설명, 일정, 알림 기준 비율 등을 입력하여 테스크를 추가합니다.
 
-![add_task](./img8.png)
+![add_task](./img/img8.png)
 
 ---
 
 ### ✏️ 9. 프로젝트 및 테스크 수정 페이지 (`m_project_edit.php`)
 - 기존 프로젝트 및 테스크의 내용을 수정하거나 삭제할 수 있습니다.
 
-![edit_project_task](./img9.png)
+![edit_project_task](./img/img9.png)
 
 ---
 
 ### ✅ 10. 수정 완료 알림 페이지 (`process_project_edit.php`)
 - 수정이 완료되면 성공 메시지를 출력하고, 목록 페이지로 돌아가는 버튼이 제공됩니다.
 
-![edit_complete](./img10.png)
+![edit_complete](./img/img10.png)
 
 ---
 
